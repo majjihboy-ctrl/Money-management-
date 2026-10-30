@@ -11,7 +11,9 @@
       "resizeMode": "contain",
       "backgroundColor": "#0f172a"
     },
-    "assetBundlePatterns": ["**/*"],
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.moneyflow.app",
@@ -47,6 +49,18 @@
       "eas": {
         "projectId": "your-eas-project-id"
       }
-    }
+    },
+    "web": {
+      "favicon": "./assets/icon.png",
+      "bundler": "metro",
+      "output": "static",
+      "name": "MoneyFlow",
+      "shortName": "MoneyFlow",
+      "lang": "en",
+      "themeColor": "#0ea5e9",
+      "backgroundColor": "#0f172a",
+      "description": "Personal money management \u2014 income, spending, budgets, goals in one place."
+    },
+    "scheme": "moneyflow"
   }
 }

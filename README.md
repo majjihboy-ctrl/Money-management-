@@ -159,3 +159,34 @@ Money arithmetic, transfer pairing, and budget inclusion rules should be covered
 ## License
 
 Private / your choice. Provide a privacy policy before public release.
+
+---
+
+## Permanent web app (GitHub Pages)
+
+This project deploys a **static web build** automatically on every push to `main`.
+
+### One-time setup (on your phone browser)
+
+1. Open the repo → **Settings** → **Pages**
+2. Under **Build and deployment**, set Source to **GitHub Actions**
+3. (Optional but recommended) Repo → **Settings** → **Secrets and variables** → **Actions** → **Variables**
+   - `EXPO_PUBLIC_SUPABASE_URL` = your Supabase project URL
+   - `EXPO_PUBLIC_SUPABASE_ANON_KEY` = your Supabase anon key
+4. Push to `main` (or re-run the workflow). Live URL will be:
+   `https://majjihboy-ctrl.github.io/Money-management-/`
+
+Without Supabase variables the UI still loads; auth and data require the keys.
+
+### Local web preview
+
+```bash
+npm install
+npx expo start --web
+# or static export:
+npx expo export -p web
+```
+
+### Native apps later
+
+Same codebase. Use [EAS Build](https://docs.expo.dev/build/setup/) when you want Play Store / App Store binaries.

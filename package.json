@@ -12,7 +12,9 @@
     "test:unit": "jest tests/unit",
     "typecheck": "tsc --noEmit",
     "db:reset": "supabase db reset",
-    "db:migrate": "supabase migration up"
+    "db:migrate": "supabase migration up",
+    "export:web": "expo export -p web",
+    "build:web": "expo export -p web"
   },
   "dependencies": {
     "@expo/vector-icons": "^14.0.4",
@@ -44,7 +46,10 @@
     "react-native-svg": "15.8.0",
     "react-native-toast-message": "^2.2.1",
     "uuid": "^11.0.5",
-    "zustand": "^5.0.3"
+    "zustand": "^5.0.3",
+    "react-dom": "18.3.1",
+    "react-native-web": "~0.19.13",
+    "@expo/metro-runtime": "~4.0.0"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
