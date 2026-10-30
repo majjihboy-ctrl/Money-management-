@@ -34,7 +34,7 @@ jobs:
         env:
           EXPO_NO_TELEMETRY: 1
           EXPO_PUBLIC_SUPABASE_URL: https://afltanlcwjhdweyvukjq.supabase.co
-          EXPO_PUBLIC_SUPABASE_ANON_KEY: sb_publishable_Dm_YpjQhHbvSqEwaBfdVcA_tXPUeIZU
+          EXPO_PUBLIC_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFmbHRhbmxjd2poZHdleXZ1a2pxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTMzNDgzMDMsImV4cCI6MjEwODkyNDMwM30.xbT16dqHw-fdj4ovg302PN2wgVlKAbEtiuMQ96q7j8k
           EXPO_PUBLIC_DEFAULT_CURRENCY: KES
 
       - name: Upload Pages artifact
