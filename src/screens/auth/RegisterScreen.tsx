@@ -1,15 +1,17 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, StyleSheet, SafeAreaView, Alert, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, TextInput, StyleSheet, SafeAreaView, KeyboardAvoidingView, Platform } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Button } from '../../components/ui/Button';
 import { useTheme } from '../../hooks/useTheme';
 import { spacing, typography, radius } from '../../constants/theme';
-import { signUp } from '../../services/auth';
+import { signUp, signIn, notify } from '../../services/auth';
 import { isSupabaseConfigured } from '../../lib/supabase';
+import { useAppStore } from '../../store/useAppStore';
 
 export function RegisterScreen() {
   const { colors } = useTheme();
   const nav = useNavigation();
+  const setSession = useAppStore((s) => s.setSession);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -17,20 +19,42 @@ export function RegisterScreen() {
 
   async function handleRegister() {
     if (!email.trim() || !password || password.length < 8) {
-      Alert.alert('Check fields', 'Valid email and password (min 8 chars) required');
+      notify('Check fields', 'Valid email and password (min 8 characters) required');
       return;
     }
     if (!isSupabaseConfigured) {
-      Alert.alert('Backend not configured', 'Add Supabase keys to .env');
+      notify('Backend not configured', 'Supabase keys missing from this build.');
       return;
     }
     setLoading(true);
     try {
-      await signUp(email.trim(), password, name.trim() || undefined);
-      Alert.alert('Check your email', 'We sent a confirmation link. After confirming, sign in.');
+      const data = await signUp(email.trim(), password, name.trim() || undefined);
+
+      // If email confirmation is disabled, session is returned immediately
+      if (data.session) {
+        setSession(data.session);
+        notify('Account created', 'Welcome to MoneyFlow.');
+        return;
+      }
+
+      // Confirmation required — try sign-in anyway (works if confirm is off / auto-confirm)
+      try {
+        const login = await signIn(email.trim(), password);
+        if (login.session) {
+          setSession(login.session);
+          return;
+        }
+      } catch {
+        /* fall through to confirm message */
+      }
+
+      notify(
+        'Confirm your email',
+        'We sent a confirmation link. Open it, then come back and sign in.\n\nTo skip this for testing: Supabase → Authentication → Providers → Email → turn OFF "Confirm email".'
+      );
       nav.navigate('Login' as never);
     } catch (e: any) {
-      Alert.alert('Registration failed', e.message || 'Unknown error');
+      notify('Registration failed', e?.message || 'Unknown error');
     } finally {
       setLoading(false);
     }
@@ -59,6 +83,7 @@ export function RegisterScreen() {
             style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
             autoCapitalize="none"
             keyboardType="email-address"
+            autoComplete="email"
             value={email}
             onChangeText={setEmail}
             placeholder="you@example.com"
@@ -69,6 +94,7 @@ export function RegisterScreen() {
           <TextInput
             style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
             secureTextEntry
+            autoComplete="new-password"
             value={password}
             onChangeText={setPassword}
             placeholder="At least 8 characters"
@@ -76,7 +102,12 @@ export function RegisterScreen() {
           />
 
           <Button title="Create account" onPress={handleRegister} loading={loading} style={{ marginTop: spacing.xl }} />
-          <Button title="Already have an account" variant="ghost" onPress={() => nav.navigate('Login' as never)} style={{ marginTop: spacing.sm }} />
+          <Button
+            title="Already have an account"
+            variant="ghost"
+            onPress={() => nav.navigate('Login' as never)}
+            style={{ marginTop: spacing.sm }}
+          />
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>

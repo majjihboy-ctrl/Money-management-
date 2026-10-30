@@ -1,37 +1,46 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, StyleSheet, SafeAreaView, Alert, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, TextInput, StyleSheet, SafeAreaView, KeyboardAvoidingView, Platform } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Button } from '../../components/ui/Button';
 import { useTheme } from '../../hooks/useTheme';
 import { spacing, typography, radius } from '../../constants/theme';
-import { signIn } from '../../services/auth';
+import { signIn, notify } from '../../services/auth';
 import { isSupabaseConfigured } from '../../lib/supabase';
+import { useAppStore } from '../../store/useAppStore';
 
 export function LoginScreen() {
   const { colors } = useTheme();
   const nav = useNavigation();
+  const setSession = useAppStore((s) => s.setSession);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
   async function handleLogin() {
     if (!email.trim() || !password) {
-      Alert.alert('Missing fields', 'Enter email and password');
+      notify('Missing fields', 'Enter email and password');
       return;
     }
     if (!isSupabaseConfigured) {
-      Alert.alert(
+      notify(
         'Backend not configured',
-        'Set EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY in .env, then restart Expo.'
+        'Supabase keys are missing from this build. Redeploy with EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY.'
       );
       return;
     }
     setLoading(true);
     try {
-      await signIn(email.trim(), password);
-      // Auth state listener in App will navigate
+      const data = await signIn(email.trim(), password);
+      if (data.session) {
+        setSession(data.session);
+      } else {
+        notify(
+          'Almost there',
+          'Signed in but no session returned. If email confirmation is required, confirm your email first.'
+        );
+      }
     } catch (e: any) {
-      Alert.alert('Sign in failed', e.message || 'Unknown error');
+      notify('Sign in failed', e?.message || 'Unknown error');
     } finally {
       setLoading(false);
     }
@@ -51,6 +60,7 @@ export function LoginScreen() {
             style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
             autoCapitalize="none"
             keyboardType="email-address"
+            autoComplete="email"
             value={email}
             onChangeText={setEmail}
             placeholder="you@example.com"
@@ -61,14 +71,21 @@ export function LoginScreen() {
           <TextInput
             style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
             secureTextEntry
+            autoComplete="password"
             value={password}
             onChangeText={setPassword}
             placeholder="••••••••"
             placeholderTextColor={colors.textMuted}
+            onSubmitEditing={handleLogin}
           />
 
           <Button title="Sign in" onPress={handleLogin} loading={loading} style={{ marginTop: spacing.xl }} />
-          <Button title="Create account" variant="ghost" onPress={() => nav.navigate('Register' as never)} style={{ marginTop: spacing.sm }} />
+          <Button
+            title="Create account"
+            variant="ghost"
+            onPress={() => nav.navigate('Register' as never)}
+            style={{ marginTop: spacing.sm }}
+          />
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
