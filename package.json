@@ -1,7 +1,7 @@
 {
   "name": "moneyflow",
   "version": "1.0.0",
-  "main": "expo/AppEntry.js",
+  "main": "node_modules/expo/AppEntry.js",
   "scripts": {
     "start": "expo start",
     "android": "expo start --android",
@@ -49,7 +49,8 @@
     "zustand": "^5.0.3",
     "react-dom": "18.3.1",
     "react-native-web": "~0.19.13",
-    "@expo/metro-runtime": "~4.0.0"
+    "@expo/metro-runtime": "~4.0.0",
+    "expo-asset": "~11.0.0"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",

@@ -32,6 +32,7 @@ jobs:
       - name: Export web
         run: npx expo export -p web
         env:
+          EXPO_NO_TELEMETRY: 1
           EXPO_PUBLIC_SUPABASE_URL: ${{ vars.EXPO_PUBLIC_SUPABASE_URL }}
           EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ vars.EXPO_PUBLIC_SUPABASE_ANON_KEY }}
           EXPO_PUBLIC_DEFAULT_CURRENCY: KES
