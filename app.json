@@ -53,7 +53,7 @@
     "web": {
       "favicon": "./assets/icon.png",
       "bundler": "metro",
-      "output": "static",
+      "output": "single",
       "name": "MoneyFlow",
       "shortName": "MoneyFlow",
       "lang": "en",
