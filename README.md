@@ -190,3 +190,10 @@ npx expo export -p web
 ### Native apps later
 
 Same codebase. Use [EAS Build](https://docs.expo.dev/build/setup/) when you want Play Store / App Store binaries.
+
+## Database setup (required once)
+
+See [docs/SUPABASE_SETUP.md](docs/SUPABASE_SETUP.md).
+
+Paste `supabase/APPLY_ALL.sql` into the Supabase SQL Editor and run it.  
+GitHub Pages does not apply migrations automatically.
