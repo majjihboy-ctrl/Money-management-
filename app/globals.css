@@ -1,0 +1,19 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: 210 20% 98%; --foreground: 222 30% 12%; --card: 0 0% 100%;
+  --muted: 214 24% 94%; --muted-foreground: 215 14% 38%; --border: 214 20% 87%; --ring: 160 84% 32%;
+  --primary: 160 84% 28%; --primary-foreground: 0 0% 100%;
+  --destructive: 0 72% 48%; --success: 160 84% 30%; --warning: 32 95% 40%;
+}
+.dark {
+  --background: 222 30% 7%; --foreground: 210 20% 94%; --card: 222 28% 10%;
+  --muted: 222 22% 15%; --muted-foreground: 215 16% 68%; --border: 222 18% 20%; --ring: 160 70% 45%;
+  --primary: 160 70% 42%; --primary-foreground: 222 30% 6%;
+  --destructive: 0 72% 58%; --success: 160 70% 45%; --warning: 38 92% 55%;
+}
+body { @apply bg-background text-foreground antialiased; font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; }
+.num { font-variant-numeric: tabular-nums; }
+@media print { aside, nav, .no-print { display: none !important; } }
