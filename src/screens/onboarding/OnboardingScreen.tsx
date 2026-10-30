@@ -7,7 +7,6 @@ import {
   SafeAreaView,
   ScrollView,
   Pressable,
-  Alert,
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
@@ -16,6 +15,7 @@ import { useTheme } from '../../hooks/useTheme';
 import { useAppStore } from '../../store/useAppStore';
 import { spacing, typography, radius } from '../../constants/theme';
 import { completeOnboarding } from '../../services/onboarding';
+import { notify } from '../../services/auth';
 import { seedDefaultCategories } from '../../services/categories';
 import { listAccounts } from '../../services/accounts';
 import { listCategories } from '../../services/categories';
@@ -50,7 +50,7 @@ export function OnboardingScreen() {
   async function finish() {
     const userId = session?.user?.id;
     if (!userId) {
-      Alert.alert('Not signed in', 'Please sign in again.');
+      notify('Not signed in', 'Please sign in again.');
       return;
     }
 
@@ -67,17 +67,23 @@ export function OnboardingScreen() {
         timezone: 'Africa/Nairobi',
       });
 
-      setProfile(profile);
+      setProfile({ ...profile, onboarding_completed: true });
 
-      // Refresh store data
       const [accounts, categories] = await Promise.all([
         listAccounts(userId),
         listCategories(userId),
       ]);
       setAccounts(accounts);
       setCategories(categories);
+      notify('Setup complete', 'Your account is ready.');
     } catch (e: any) {
-      Alert.alert('Could not finish setup', e.message || 'Please try again.');
+      const msg =
+        e?.message ||
+        e?.error_description ||
+        (typeof e === 'string' ? e : null) ||
+        'Please try again. If this keeps happening, confirm APPLY_ALL.sql ran in Supabase.';
+      console.error('Onboarding failed', e);
+      notify('Could not finish setup', msg);
     } finally {
       setLoading(false);
     }
@@ -85,11 +91,11 @@ export function OnboardingScreen() {
 
   function next() {
     if (step === 0 && !preferredName.trim()) {
-      Alert.alert('Name needed', 'What should we call you?');
+      notify('Name needed', 'What should we call you?');
       return;
     }
     if (step === 1 && !accountName.trim()) {
-      Alert.alert('Account name', 'Give your first account a name.');
+      notify('Account name', 'Give your first account a name.');
       return;
     }
     if (step < totalSteps - 1) setStep(step + 1);
