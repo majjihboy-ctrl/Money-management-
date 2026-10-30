@@ -61,6 +61,9 @@
       "backgroundColor": "#0f172a",
       "description": "Personal money management \u2014 income, spending, budgets, goals in one place."
     },
-    "scheme": "moneyflow"
+    "scheme": "moneyflow",
+    "experiments": {
+      "baseUrl": "/Money-management-"
+    }
   }
 }
