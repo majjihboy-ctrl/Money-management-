@@ -25,15 +25,13 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: npm
 
       - name: Install
-        run: npm ci || npm install
+        run: npm install
 
       - name: Export web
         run: npx expo export -p web
         env:
-          # Public keys only — never put service-role secrets here
           EXPO_PUBLIC_SUPABASE_URL: ${{ vars.EXPO_PUBLIC_SUPABASE_URL }}
           EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ vars.EXPO_PUBLIC_SUPABASE_ANON_KEY }}
           EXPO_PUBLIC_DEFAULT_CURRENCY: KES
