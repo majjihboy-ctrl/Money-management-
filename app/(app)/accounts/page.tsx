@@ -32,7 +32,7 @@ export default function Accounts() {
               <div className="flex items-start justify-between"><div><Link href={`/accounts/${a.id}`} className="font-semibold hover:underline">{a.name}</Link><div className="mt-1"><Badge>{TYPES.find((t) => t[0] === a.type)?.[1]}</Badge></div></div>
                 <div className="flex"><Button variant="ghost" size="icon" aria-label="Edit account" onClick={() => setEdit(a)}><Pencil className="h-4 w-4" /></Button><Button variant="ghost" size="icon" aria-label="Archive account" onClick={() => setArch(a)}><Archive className="h-4 w-4" /></Button></div></div>
               <div className={`num mt-3 text-2xl font-semibold ${(balances[a.id] ?? 0) < 0 ? 'text-destructive' : ''} ${hide ? 'blur-sm' : ''}`}>{money.fmt(balances[a.id] ?? 0)}</div>
-              <div className="mt-3 flex gap-2"><Button size="sm" variant="outline" onClick={() => qa.open('deposit', undefined, { account_id: a.id })}><ArrowDownToLine className="h-3.5 w-3.5" />Deposit</Button><Button size="sm" variant="outline" onClick={() => qa.open('withdrawal', undefined, { account_id: a.id })}><ArrowUpFromLine className="h-3.5 w-3.5" />Withdraw</Button></div>
+              <div className="mt-3 flex flex-wrap gap-2"><Link href={`/accounts/${a.id}`} className="inline-flex h-8 items-center rounded-md border border-border px-3 text-xs font-medium hover:bg-muted">Statement</Link><Button size="sm" variant="outline" onClick={() => qa.open('deposit', undefined, { account_id: a.id })}><ArrowDownToLine className="h-3.5 w-3.5" />Deposit</Button><Button size="sm" variant="outline" onClick={() => qa.open('withdrawal', undefined, { account_id: a.id })}><ArrowUpFromLine className="h-3.5 w-3.5" />Withdraw</Button></div>
             </Card>
           ))}
         </div>
@@ -61,7 +61,7 @@ function AccountForm({ initial, onDone }: { initial?: Account; onDone: () => voi
     <form onSubmit={f.handleSubmit(submit)} className="space-y-4" noValidate>
       <Field label="Name" error={errors.name?.message}><Input {...f.register('name')} placeholder="e.g. M-Pesa, Equity Bank" /></Field>
       <Field label="Type"><Select {...f.register('type')}>{TYPES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</Select></Field>
-      <Field label={`Opening balance (${money.cur})`} error={errors.opening?.message} hint="Balances are always opening balance + posted transactions."><Input inputMode="decimal" {...f.register('opening')} /></Field>
+      <Field label={`Starting balance (${money.cur})`} error={errors.opening?.message} hint="Enter what this account holds today (e.g. your current M-Pesa balance). Everything you record after this adds to or subtracts from it."><Input inputMode="decimal" {...f.register('opening')} /></Field>
       <Toggle label="Allow overdraft (balance may go below zero)" checked={f.watch('overdraft')} onChange={(v) => f.setValue('overdraft', v)} />
       <div className="flex justify-end gap-2"><Button type="button" variant="outline" onClick={onDone}>Cancel</Button><Button type="submit" loading={isSubmitting}>Save</Button></div>
     </form>
