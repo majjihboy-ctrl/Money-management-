@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import { Archive, Pencil, Plus, Download, Trash2 } from 'lucide-react';
 import { useApp } from '@/components/app-provider';
 import { NotifPrefs } from '@/components/notif-prefs';
+import { AppLockSettings } from '@/components/app-lock';
 import { Button, Card, CardBody, CardHeader, Confirm, Field, Input, Modal, PageHeader, Select, Toggle, Badge } from '@/components/ui';
 import { CURRENCIES } from '@/lib/money';
 import { errMsg } from '@/lib/utils';
@@ -118,7 +119,7 @@ export default function Settings() {
   return (
     <>
       <PageHeader title="Settings" />
-      <div className="space-y-4"><Profile /><Preferences /><Card><CardHeader title="Notification preferences" /><CardBody><NotifPrefs /></CardBody></Card><Categories /><Password /><DataPrivacy /></div>
+      <div className="space-y-4"><Profile /><Preferences /><Card><CardHeader title="Notification preferences" /><CardBody><NotifPrefs /></CardBody></Card><Categories /><Card><CardHeader title="App lock (PIN)" /><CardBody><AppLockSettings /></CardBody></Card><Password /><DataPrivacy /></div>
     </>
   );
 }

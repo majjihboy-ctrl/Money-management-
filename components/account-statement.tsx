@@ -8,7 +8,8 @@ import { Badge, Button, Card, CardBody, CardHeader, Confirm, Empty, Field, Input
 import { fetchTxns } from '@/lib/queries';
 import { buildStatement } from '@/lib/statement';
 import { fmtDay, todayStr } from '@/lib/dates';
-import { cn, errMsg, uuid } from '@/lib/utils';
+import { cn, errMsg } from '@/lib/utils';
+import { postAdjustment } from '@/lib/adjust';
 import type { Account } from '@/lib/types';
 
 export function AccountStatement({ acc }: { acc: Account }) {
@@ -67,10 +68,7 @@ function Reconcile({ acc, bal, onDone, mobile }: { acc: Account; bal: number; on
   async function post() {
     if (diff === null || diff === 0) return; setBusy(true);
     try {
-      const payload = { id: uuid(), kind: diff > 0 ? 'deposit' : 'withdrawal', account_id: acc.id, amount_minor: Math.abs(diff), occurred_at: new Date().toISOString(),
-        description: 'Balance adjustment (reconciled with actual balance)', payment_method: mobile ? 'M-Pesa' : null, is_recurring: false };
-      const { error } = await sb.rpc('save_transaction', { p: payload, p_splits: [] });
-      if (error) throw error;
+      await postAdjustment(sb, acc, diff, mobile);
       toast.success('Balance adjusted — it now matches your actual balance'); setV(''); setAsk(false); onDone();
     } catch (e) { toast.error(errMsg(e)); } finally { setBusy(false); }
   }

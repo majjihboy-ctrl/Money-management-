@@ -8,12 +8,14 @@ import { toast } from 'sonner';
 import { Plus, ArrowLeftRight, Archive, Pencil, ArrowDownToLine, ArrowUpFromLine } from 'lucide-react';
 import { useApp } from '@/components/app-provider';
 import { useQuickAdd } from '@/components/quick-add';
+import { MpesaImportButton } from '@/components/mpesa-import';
 import { Badge, Button, Card, Confirm, Empty, Field, Input, Modal, PageHeader, Select, Stat, Toggle } from '@/components/ui';
 import { inputValue } from '@/lib/money';
 import { errMsg } from '@/lib/utils';
 import type { Account } from '@/lib/types';
 
 const TYPES = [['cash', 'Cash'], ['bank', 'Bank account'], ['mobile_money', 'Mobile money'], ['savings', 'Savings account'], ['other', 'Other']] as const;
+const PRESETS: [string, string][] = [['M-Pesa', 'mobile_money'], ['Airtel Money', 'mobile_money'], ['Bank account', 'bank'], ['Sacco', 'savings'], ['Chama', 'savings'], ['Cash', 'cash']];
 export default function Accounts() {
   const { sb, accounts, balances, money, refresh, hide } = useApp(); const qa = useQuickAdd();
   const [edit, setEdit] = useState<Account | 'new' | null>(null); const [arch, setArch] = useState<Account | null>(null); const [showArch, setShowArch] = useState(false);
@@ -32,7 +34,7 @@ export default function Accounts() {
               <div className="flex items-start justify-between"><div><Link href={`/accounts/${a.id}`} className="font-semibold hover:underline">{a.name}</Link><div className="mt-1"><Badge>{TYPES.find((t) => t[0] === a.type)?.[1]}</Badge></div></div>
                 <div className="flex"><Button variant="ghost" size="icon" aria-label="Edit account" onClick={() => setEdit(a)}><Pencil className="h-4 w-4" /></Button><Button variant="ghost" size="icon" aria-label="Archive account" onClick={() => setArch(a)}><Archive className="h-4 w-4" /></Button></div></div>
               <div className={`num mt-3 text-2xl font-semibold ${(balances[a.id] ?? 0) < 0 ? 'text-destructive' : ''} ${hide ? 'blur-sm' : ''}`}>{money.fmt(balances[a.id] ?? 0)}</div>
-              <div className="mt-3 flex flex-wrap gap-2"><Link href={`/accounts/${a.id}`} className="inline-flex h-8 items-center rounded-md border border-border px-3 text-xs font-medium hover:bg-muted">Statement</Link><Button size="sm" variant="outline" onClick={() => qa.open('deposit', undefined, { account_id: a.id })}><ArrowDownToLine className="h-3.5 w-3.5" />Deposit</Button><Button size="sm" variant="outline" onClick={() => qa.open('withdrawal', undefined, { account_id: a.id })}><ArrowUpFromLine className="h-3.5 w-3.5" />Withdraw</Button></div>
+              <div className="mt-3 flex flex-wrap gap-2"><Link href={`/accounts/${a.id}`} className="inline-flex h-8 items-center rounded-md border border-border px-3 text-xs font-medium hover:bg-muted">Statement</Link>{a.type === 'mobile_money' && <MpesaImportButton acc={a} />}<Button size="sm" variant="outline" onClick={() => qa.open('deposit', undefined, { account_id: a.id })}><ArrowDownToLine className="h-3.5 w-3.5" />Deposit</Button><Button size="sm" variant="outline" onClick={() => qa.open('withdrawal', undefined, { account_id: a.id })}><ArrowUpFromLine className="h-3.5 w-3.5" />Withdraw</Button></div>
             </Card>
           ))}
         </div>
@@ -59,6 +61,7 @@ function AccountForm({ initial, onDone }: { initial?: Account; onDone: () => voi
   }
   return (
     <form onSubmit={f.handleSubmit(submit)} className="space-y-4" noValidate>
+      {!initial && <div className="flex flex-wrap gap-1.5" role="group" aria-label="Quick pick">{PRESETS.map(([n, t]) => <button type="button" key={n} onClick={() => { f.setValue('name', n); f.setValue('type', t); }} className="rounded-full border border-border bg-card px-3 py-1 text-xs font-medium hover:bg-muted">{n}</button>)}</div>}
       <Field label="Name" error={errors.name?.message}><Input {...f.register('name')} placeholder="e.g. M-Pesa, Equity Bank" /></Field>
       <Field label="Type"><Select {...f.register('type')}>{TYPES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</Select></Field>
       <Field label={`Starting balance (${money.cur})`} error={errors.opening?.message} hint="Enter what this account holds today (e.g. your current M-Pesa balance). Everything you record after this adds to or subtracts from it."><Input inputMode="decimal" {...f.register('opening')} /></Field>

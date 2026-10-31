@@ -6,6 +6,7 @@ import { Card, Empty, Loading, PageHeader, Stat } from '@/components/ui';
 import { fmtDate } from '@/lib/dates';
 import { cn } from '@/lib/utils';
 import { AccountStatement } from '@/components/account-statement';
+import { MpesaImportButton } from '@/components/mpesa-import';
 import type { Txn } from '@/lib/types';
 
 export default function AccountDetail() {
@@ -17,7 +18,7 @@ export default function AccountDetail() {
   let run = balances[id] ?? 0; const rows = (data ?? []).map((t) => { const after = run; run -= t.signed_amount_minor; return { t, after }; });
   return (
     <>
-      <PageHeader title={acc.name} desc="Daily opening and closing balances, plus every transaction." actions={<Link href="/accounts" className="text-sm underline">All accounts</Link>} />
+      <PageHeader title={acc.name} desc="Daily opening and closing balances, plus every transaction." actions={<>{acc.type === 'mobile_money' && <MpesaImportButton acc={acc} variant="default" />}<Link href="/accounts" className="text-sm underline">All accounts</Link></>} />
       <div className="mb-4 grid grid-cols-2 gap-3"><Stat label="Balance" value={money.fmt(balances[id] ?? 0)} /><Stat label="Starting balance" value={money.fmt(acc.opening_balance_minor)} sub="When you added this account" /></div>
       <AccountStatement acc={acc} />
       <h2 className="mb-2 mt-6 text-sm font-semibold">All transactions</h2>

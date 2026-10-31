@@ -1,6 +1,6 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
-const PUBLIC = ['/login', '/register', '/forgot-password', '/auth', '/reset-password'];
+const PUBLIC = ['/login', '/register', '/forgot-password', '/auth', '/reset-password', '/manifest.webmanifest', '/sw.js', '/offline.html'];
 export async function middleware(req: NextRequest) {
   let res = NextResponse.next({ request: req });
   const sb = createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, {
