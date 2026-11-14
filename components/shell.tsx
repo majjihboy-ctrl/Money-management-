@@ -8,6 +8,7 @@ import { QuickAddProvider, useQuickAdd } from './quick-add';
 import { Button } from './ui';
 import { cn } from '@/lib/utils';
 import { syncNotifications } from '@/lib/notify';
+import { pending } from '@/lib/offline';
 
 type Tab = { href: string; label: string };
 type Group = { label: string; href: string; icon: typeof Home; match: string[]; tabs?: Tab[] };
@@ -48,6 +49,12 @@ function ShellInner({ children }: { children: React.ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);
   const [drawer, setDrawer] = useState(false);
   const last = useRef(0);
+  const [online, setOnline] = useState(true); const [queued, setQueued] = useState(0);
+  useEffect(() => {
+    const sync = () => { setOnline(navigator.onLine); setQueued(pending()); };
+    sync(); ['online', 'offline', 'mm-outbox'].forEach((e) => window.addEventListener(e, sync));
+    return () => ['online', 'offline', 'mm-outbox'].forEach((e) => window.removeEventListener(e, sync));
+  }, []);
   useEffect(() => { setDrawer(false); }, [path]);
   useEffect(() => { setCollapsed(localStorage.getItem('sidebar') === '1'); }, []);
   useEffect(() => {
@@ -75,6 +82,7 @@ function ShellInner({ children }: { children: React.ReactNode }) {
           <Button variant="ghost" size="sm" className="mt-2" onClick={() => { setCollapsed(!collapsed); localStorage.setItem('sidebar', collapsed ? '0' : '1'); }} aria-label="Toggle sidebar">{collapsed ? <PanelLeftOpen className="h-4 w-4" /> : <><PanelLeftClose className="h-4 w-4" /> Collapse</>}</Button>
         </aside>
         <div className="min-w-0 flex-1">
+          {(!online || queued > 0) && <div role="status" className="no-print bg-warning/15 px-4 py-1.5 text-center text-xs font-medium text-warning">{!online ? "You are offline. New entries are saved on this phone." : ""}{queued > 0 ? ` ${queued} waiting to sync.` : ""}</div>}
           <header className="no-print sticky top-0 z-30 flex h-14 items-center justify-between gap-2 border-b border-border/60 bg-background/85 px-4 backdrop-blur-md">
             <div className="flex items-center gap-2 md:hidden"><span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-primary text-primary-foreground"><Wallet2 className="h-4 w-4" /></span><span className="font-semibold tracking-tight">Money</span></div>
             <div className="hidden text-sm text-muted-foreground md:block">{profile.full_name ? `Hello, ${profile.full_name.split(' ')[0]}` : 'Welcome'}</div>

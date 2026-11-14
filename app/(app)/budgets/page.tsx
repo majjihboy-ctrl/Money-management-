@@ -7,7 +7,7 @@ import { toast } from 'sonner';
 import { Plus, Pencil, Trash2 } from 'lucide-react';
 import { useApp, useLoad } from '@/components/app-provider';
 import { Bars } from '@/components/charts';
-import { Badge, Button, Card, CardBody, CardHeader, Confirm, Empty, Field, Input, Loading, Modal, PageHeader, Progress, Select } from '@/components/ui';
+import { Badge, Button, Card, CardBody, CardHeader, Confirm, Empty, Field, Input, Loading, Modal, PageHeader, Ring, Select } from '@/components/ui';
 import { addDays, endOfMonth, endOfYear, fmtDay, startOfMonth, startOfWeek, startOfYear, todayStr } from '@/lib/dates';
 import { loadBudgets } from '@/lib/queries';
 import { inputValue } from '@/lib/money';
@@ -33,8 +33,10 @@ export default function Budgets() {
             {data.map((b) => (
               <Card key={b.id} className="p-4">
                 <div className="flex items-start justify-between gap-2"><div><div className="font-semibold">{b.name}</div><div className="text-xs text-muted-foreground">{b.period} · {fmtDay(b.start_date, 'd MMM yyyy')} – {fmtDay(b.end_date, 'd MMM yyyy')}{b.category_id ? ` · ${categories.find((c) => c.id === b.category_id)?.name}` : ' · All expenses'}</div></div><Badge tone={tone(b.status)}>{b.status}</Badge></div>
-                <div className="mt-3"><Progress value={b.pct} tone={b.pct >= 100 ? 'danger' : b.pct >= (b.thresholds[0] ?? 75) ? 'warning' : 'success'} /></div>
-                <div className="num mt-2 grid grid-cols-3 gap-2 text-sm"><div><div className="text-xs text-muted-foreground">Budget</div>{money.fmt(b.amount_minor)}</div><div><div className="text-xs text-muted-foreground">Spent</div>{money.fmt(b.spent)}</div><div><div className="text-xs text-muted-foreground">Remaining</div><span className={b.spent > b.amount_minor ? 'text-destructive' : ''}>{money.fmt(b.amount_minor - b.spent)}</span></div></div>
+                <div className="mt-4 flex items-center gap-4">
+                  <Ring value={b.pct} size={84} stroke={9} tone={b.pct >= 100 ? 'danger' : b.pct >= (b.thresholds[0] ?? 75) ? 'warning' : 'success'}><span className="num text-base font-bold">{Math.round(b.pct)}%</span></Ring>
+                  <div className="num grid flex-1 grid-cols-1 gap-1 text-sm"><div className="flex justify-between"><span className="text-muted-foreground">Budget</span>{money.fmt(b.amount_minor)}</div><div className="flex justify-between"><span className="text-muted-foreground">Spent</span>{money.fmt(b.spent)}</div><div className="flex justify-between font-medium"><span className="text-muted-foreground">{b.spent > b.amount_minor ? 'Over by' : 'Left'}</span><span className={b.spent > b.amount_minor ? 'text-destructive' : ''}>{money.fmt(Math.abs(b.amount_minor - b.spent))}</span></div></div>
+                </div>
                 <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground"><span>{b.pct.toFixed(0)}% used · alerts at {b.thresholds.join('%, ')}%</span><span><Button variant="ghost" size="icon" aria-label="Edit budget" onClick={() => setEdit(b)}><Pencil className="h-4 w-4" /></Button><Button variant="ghost" size="icon" aria-label="Delete budget" onClick={() => setDel(b)}><Trash2 className="h-4 w-4" /></Button></span></div>
               </Card>
             ))}

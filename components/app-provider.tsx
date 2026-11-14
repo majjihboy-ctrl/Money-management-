@@ -1,7 +1,9 @@
 'use client';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import type { SupabaseClient, User } from '@supabase/supabase-js';
+import { toast } from 'sonner';
 import { createClient } from '@/lib/supabase/client';
+import { flush } from '@/lib/offline';
 import { formatMoney, parseMinor, toMajor } from '@/lib/money';
 import type { Account, Category, Profile } from '@/lib/types';
 
@@ -42,6 +44,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const t = s.profile.theme; localStorage.setItem('theme', t);
     document.documentElement.classList.toggle('dark', t === 'dark' || (t === 'system' && matchMedia('(prefers-color-scheme: dark)').matches));
   }, [s?.profile.theme]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const ready = !!s;
+  useEffect(() => {
+    if (!ready) return;
+    const run = async () => {
+      if (!navigator.onLine) return;
+      const r = await flush(sb);
+      if (r.saved) { toast.success(`Synced ${r.saved} ${r.saved === 1 ? 'entry' : 'entries'} saved while offline`); refresh(); }
+      if (r.dropped) toast.error(`${r.dropped} offline ${r.dropped === 1 ? 'entry was' : 'entries were'} rejected by the server and not saved`);
+    };
+    run(); window.addEventListener('online', run); return () => window.removeEventListener('online', run);
+  }, [ready, sb, refresh]);
 
   const cur = s?.profile.currency ?? 'KES';
   const money = useMemo<Money>(() => ({

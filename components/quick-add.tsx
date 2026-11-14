@@ -1,15 +1,16 @@
 'use client';
-import { createContext, useCallback, useContext, useMemo, useRef, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'sonner';
-import { Plus, ArrowDownLeft, ArrowUpRight, ArrowLeftRight, PiggyBank, Landmark, Paperclip, Trash2 } from 'lucide-react';
+import { Plus, ArrowDownLeft, ArrowUpRight, ArrowLeftRight, PiggyBank, Landmark, Paperclip, Trash2, ChevronDown } from 'lucide-react';
 import { useApp } from './app-provider';
 import { Button, Field, Input, Modal, Select, Textarea, Toggle } from './ui';
 import { errMsg, uuid } from '@/lib/utils';
 import { fromLocalInput, nowLocalInput, toLocalInput, todayStr } from '@/lib/dates';
 import { inputValue } from '@/lib/money';
+import { enqueue, isNetworkError } from '@/lib/offline';
 import type { Debt, Goal, Txn } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
@@ -99,6 +100,18 @@ function TxnForm({ kind, initial, preset, onDone }: { kind: 'income' | 'expense'
     },
   });
   const arr = useFieldArray({ control: f.control, name: 'splits' });
+  const [more, setMore] = useState(!!initial || !isTxn);
+  const [showAll, setShowAll] = useState(false);
+  const [usage, setUsage] = useState<Record<string, number>>({});
+  useEffect(() => {
+    if (!isTxn) return; let live = true;
+    sb.from('transactions').select('category_id').eq('kind', kind).is('voided_at', null).order('occurred_at', { ascending: false }).limit(300)
+      .then(({ data }) => { if (!live || !data) return; const u: Record<string, number> = {}; for (const r of data as { category_id: string | null }[]) if (r.category_id) u[r.category_id] = (u[r.category_id] ?? 0) + 1; setUsage(u); });
+    return () => { live = false; };
+  }, [sb, kind, isTxn]);
+  const sorted = [...cats].sort((a, b) => (usage[b.id] ?? 0) - (usage[a.id] ?? 0) || a.name.localeCompare(b.name));
+  const chips = showAll ? sorted : sorted.slice(0, 8);
+  const catVal = f.watch('category_id');
   const { errors, isSubmitting } = f.formState;
   const split = f.watch('split');
   useMemo(() => { if (initial) sb.from('attachments').select('id,file_name,storage_path').eq('transaction_id', initial.id).then(({ data }) => setExisting(data ?? [])); }, [initial, sb]);
@@ -113,8 +126,16 @@ function TxnForm({ kind, initial, preset, onDone }: { kind: 'income' | 'expense'
       const payload = { id, kind, account_id: v.account_id, amount_minor: minor, occurred_at: fromLocalInput(v.occurred_at, tz), category_id: isTxn ? v.category_id || null : null,
         counterparty: v.counterparty, description: v.description, notes: v.notes, payment_method: v.payment_method, is_essential: v.is_essential, is_recurring: v.is_recurring };
       const splits = kind === 'expense' && v.split ? v.splits.map((s) => ({ category_id: s.category_id, amount_minor: money.parse(s.amount)! })) : [];
-      const { error } = await sb.rpc('save_transaction', { p: payload, p_splits: splits });
-      if (error) throw error;
+      let queued = false;
+      try {
+        if (!initial && typeof navigator !== 'undefined' && !navigator.onLine) throw new TypeError('offline');
+        const { error } = await sb.rpc('save_transaction', { p: payload, p_splits: splits });
+        if (error) throw error;
+      } catch (e) {
+        if (initial || !isNetworkError(e)) throw e;
+        enqueue({ p: payload, splits }); queued = true;
+      }
+      if (queued) { toast.success(file ? 'Saved on this phone. It will sync when you are online (the receipt was not attached).' : 'Saved on this phone. It will sync when you are back online.'); onDone(); return; }
       if (file) {
         const path = `${user.id}/${id}/${Date.now()}-${file.name.replace(/[^\w.\-]/g, '_').slice(0, 80)}`;
         const up = await sb.storage.from('receipts').upload(path, file, { contentType: file.type });
@@ -130,13 +151,26 @@ function TxnForm({ kind, initial, preset, onDone }: { kind: 'income' | 'expense'
 
   return (
     <form onSubmit={f.handleSubmit(submit)} className="space-y-4" noValidate>
-      <Field label={`Amount (${money.cur})`} error={errors.amount?.message}><Input inputMode="decimal" autoFocus placeholder="0.00" {...f.register('amount')} className="h-12 text-lg" /></Field>
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Field label={kind === 'income' || kind === 'deposit' ? 'Receiving account' : 'Account'} error={errors.account_id?.message}>
-          <Select {...f.register('account_id')}><option value="">Select…</option>{accs.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}</Select></Field>
-        <Field label="Date & time" error={errors.occurred_at?.message}><Input type="datetime-local" {...f.register('occurred_at')} /></Field>
+      <div className="pt-1 text-center">
+        <label className="block"><span className="text-xs font-medium text-muted-foreground">{money.cur}</span>
+          <input inputMode="decimal" autoFocus placeholder="0" aria-label="Amount" aria-invalid={!!errors.amount} {...f.register('amount')} className="num block w-full bg-transparent text-center text-5xl font-bold tracking-tight outline-none placeholder:text-muted-foreground/40" /></label>
+        {errors.amount?.message && <p role="alert" className="mt-1 text-xs text-destructive">{errors.amount.message}</p>}
       </div>
-      {isTxn && !split && <Field label="Category"><Select {...f.register('category_id')}><option value="">Uncategorised</option>{cats.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</Select></Field>}
+      {isTxn && !split && cats.length > 0 && (
+        <div role="group" aria-label="Category" className="flex flex-wrap gap-2">
+          {chips.map((c) => <button key={c.id} type="button" aria-pressed={catVal === c.id} onClick={() => f.setValue('category_id', catVal === c.id ? '' : c.id, { shouldDirty: true })}
+            className={cn('min-h-[40px] rounded-full border px-3.5 text-sm font-medium transition active:scale-95', catVal === c.id ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-card hover:bg-muted')}>{c.name}</button>)}
+          {cats.length > 8 && <button type="button" onClick={() => setShowAll((v) => !v)} className="min-h-[40px] rounded-full px-3 text-sm text-muted-foreground underline">{showAll ? 'Fewer' : `+${cats.length - 8} more`}</button>}
+        </div>
+      )}
+      <div className="grid grid-cols-2 gap-2">
+        <Select aria-label={kind === 'income' || kind === 'deposit' ? 'Receiving account' : 'Account'} {...f.register('account_id')}><option value="">Account…</option>{accs.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}</Select>
+        <Input type="datetime-local" aria-label="Date and time" {...f.register('occurred_at')} />
+      </div>
+      {(errors.account_id?.message || errors.occurred_at?.message) && <p role="alert" className="text-xs text-destructive">{errors.account_id?.message || errors.occurred_at?.message}</p>}
+      <button type="button" onClick={() => setMore((v) => !v)} aria-expanded={more} className="flex min-h-[40px] w-full items-center justify-between text-sm font-medium text-muted-foreground"><span>More details</span><ChevronDown className={cn('h-4 w-4 transition-transform', more && 'rotate-180')} /></button>
+      {more && <div className="space-y-4">
+      {isTxn && split && <p className="text-xs text-muted-foreground">Categories are set in the split rows below.</p>}
       {isTxn && <div className="grid gap-4 sm:grid-cols-2">
         <Field label={kind === 'income' ? 'Source' : 'Merchant'}><Input {...f.register('counterparty')} placeholder="Optional" /></Field>
         <Field label="Payment method"><Select {...f.register('payment_method')}><option value="">—</option>{METHODS.map((m) => <option key={m}>{m}</option>)}</Select></Field>
@@ -172,6 +206,7 @@ function TxnForm({ kind, initial, preset, onDone }: { kind: 'income' | 'expense'
           <p className="text-xs text-muted-foreground">JPG, PNG, WebP or PDF, max 5 MB.</p>
         </div>
       )}
+      </div>}
       <Actions busy={isSubmitting} label={initial ? 'Save changes' : 'Save'} onCancel={onDone} />
     </form>
   );

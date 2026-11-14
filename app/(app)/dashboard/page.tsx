@@ -25,7 +25,7 @@ export default function Home() {
   const [details, setDetails] = useState(false);
   const today = todayStr(tz); const monthFrom = startOfMonth(today);
   const { data: d, loading, error } = useLoad(async () => {
-    const since = [filter.from, addMonths(monthFrom, -5)].sort()[0];
+    const since = [filter.from, addMonths(monthFrom, -1)].sort()[0]; // this month + last month is all Home needs
     const [txns, budgets, occ, rules] = await Promise.all([
       fetchTxns(sb, tz, since), loadBudgets(sb, tz, today),
       sb.from('recurring_occurrences').select('*').eq('state', 'pending').lte('due_date', addDays(today, 7)).order('due_date'),

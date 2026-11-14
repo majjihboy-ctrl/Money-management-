@@ -20,9 +20,13 @@ export function MpesaImportButton({ acc, variant = 'outline' }: { acc: Account; 
   </>);
 }
 
-function Importer({ acc, onClose }: { acc: Account; onClose: () => void }) {
+export function MpesaImportModal({ acc, initialText, onClose }: { acc: Account; initialText?: string; onClose: () => void }) {
+  return <Modal open onClose={onClose} title="Import M-Pesa messages" wide><Importer acc={acc} initialText={initialText} onClose={onClose} /></Modal>;
+}
+
+function Importer({ acc, initialText, onClose }: { acc: Account; initialText?: string; onClose: () => void }) {
   const { sb, tz, money, categories, refresh } = useApp();
-  const [text, setText] = useState(''); const [busy, setBusy] = useState(false);
+  const [text, setText] = useState(initialText ?? ''); const [busy, setBusy] = useState(false);
   const [rows, setRows] = useState<ReturnType<typeof parseAll> | null>(null);
   const [sel, setSel] = useState<Set<string>>(new Set()); const [cat, setCat] = useState<Record<string, string>>({});
   const [dupes, setDupes] = useState<Set<string>>(new Set()); const [fresh, setFresh] = useState(false);
