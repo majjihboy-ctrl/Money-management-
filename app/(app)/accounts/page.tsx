@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'sonner';
-import { Plus, ArrowLeftRight, Archive, Pencil, ArrowDownToLine, ArrowUpFromLine } from 'lucide-react';
+import { Plus, ArrowLeftRight, Archive, Pencil, ArrowDownToLine, ArrowUpFromLine, Smartphone, Landmark, PiggyBank, Banknote } from 'lucide-react';
 import { useApp } from '@/components/app-provider';
 import { useQuickAdd } from '@/components/quick-add';
 import { MpesaImportButton } from '@/components/mpesa-import';
@@ -31,10 +31,10 @@ export default function Accounts() {
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {active.map((a) => (
             <Card key={a.id} className="p-4">
-              <div className="flex items-start justify-between"><div><Link href={`/accounts/${a.id}`} className="font-semibold hover:underline">{a.name}</Link><div className="mt-1"><Badge>{TYPES.find((t) => t[0] === a.type)?.[1]}</Badge></div></div>
+              <div className="flex items-start justify-between"><div className="flex min-w-0 items-center gap-3"><span className={`inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${a.type === 'mobile_money' ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400' : a.type === 'bank' ? 'bg-blue-500/15 text-blue-600 dark:text-blue-400' : a.type === 'savings' ? 'bg-teal-500/15 text-teal-600 dark:text-teal-400' : 'bg-amber-500/15 text-amber-600 dark:text-amber-400'}`}>{a.type === 'mobile_money' ? <Smartphone className="h-5 w-5" /> : a.type === 'bank' ? <Landmark className="h-5 w-5" /> : a.type === 'savings' ? <PiggyBank className="h-5 w-5" /> : <Banknote className="h-5 w-5" />}</span><div className="min-w-0"><Link href={`/accounts/${a.id}`} className="block truncate font-semibold hover:underline">{a.name}</Link><div className="mt-0.5 text-xs text-muted-foreground">{TYPES.find((t) => t[0] === a.type)?.[1]}</div></div></div>
                 <div className="flex"><Button variant="ghost" size="icon" aria-label="Edit account" onClick={() => setEdit(a)}><Pencil className="h-4 w-4" /></Button><Button variant="ghost" size="icon" aria-label="Archive account" onClick={() => setArch(a)}><Archive className="h-4 w-4" /></Button></div></div>
-              <div className={`num mt-3 text-2xl font-semibold ${(balances[a.id] ?? 0) < 0 ? 'text-destructive' : ''} ${hide ? 'blur-sm' : ''}`}>{money.fmt(balances[a.id] ?? 0)}</div>
-              <div className="mt-3 flex flex-wrap gap-2"><Link href={`/accounts/${a.id}`} className="inline-flex h-8 items-center rounded-md border border-border px-3 text-xs font-medium hover:bg-muted">Statement</Link>{a.type === 'mobile_money' && <MpesaImportButton acc={a} />}<Button size="sm" variant="outline" onClick={() => qa.open('deposit', undefined, { account_id: a.id })}><ArrowDownToLine className="h-3.5 w-3.5" />Deposit</Button><Button size="sm" variant="outline" onClick={() => qa.open('withdrawal', undefined, { account_id: a.id })}><ArrowUpFromLine className="h-3.5 w-3.5" />Withdraw</Button></div>
+              <div className={`num mt-4 text-3xl font-bold tracking-tight ${(balances[a.id] ?? 0) < 0 ? 'text-destructive' : ''} ${hide ? 'blur-sm' : ''}`}>{money.fmt(balances[a.id] ?? 0)}</div>
+              <div className="mt-3 flex flex-wrap gap-2"><Link href={`/accounts/${a.id}`} className="inline-flex h-9 items-center rounded-xl border border-border px-3 text-xs font-medium hover:bg-muted">Statement</Link>{a.type === 'mobile_money' && <MpesaImportButton acc={a} />}<Button size="sm" variant="outline" onClick={() => qa.open('deposit', undefined, { account_id: a.id })}><ArrowDownToLine className="h-3.5 w-3.5" />Deposit</Button><Button size="sm" variant="outline" onClick={() => qa.open('withdrawal', undefined, { account_id: a.id })}><ArrowUpFromLine className="h-3.5 w-3.5" />Withdraw</Button></div>
             </Card>
           ))}
         </div>

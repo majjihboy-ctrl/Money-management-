@@ -38,8 +38,8 @@ export default function Daily() {
     const closing = d.opening + tx.filter((t) => accounts.find((a) => a.id === t.account_id && !a.archived_at && a.type !== 'savings')).reduce((a, t) => a + t.signed_amount_minor, 0);
     body = (
       <>
-        {over && <div role="alert" className="mb-4 flex items-start gap-3 rounded-lg border border-destructive/40 bg-destructive/10 p-4 text-sm"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-destructive" /><div><b>Daily limit exceeded</b> by {money.fmt(spent - d.limit)}. Your records are unchanged — this is only a warning.</div></div>}
-        {!over && d.limit > 0 && pct >= 80 && <div className="mb-4 flex items-start gap-3 rounded-lg border border-warning/40 bg-warning/10 p-4 text-sm"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" />You have used {pct.toFixed(0)}% of today's limit.</div>}
+        {over && <div role="alert" className="mb-4 flex items-start gap-3 rounded-xl border border-destructive/40 bg-destructive/10 p-4 text-sm"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-destructive" /><div><b>Daily limit exceeded</b> by {money.fmt(spent - d.limit)}. Your records are unchanged — this is only a warning.</div></div>}
+        {!over && d.limit > 0 && pct >= 80 && <div className="mb-4 flex items-start gap-3 rounded-xl border border-warning/40 bg-warning/10 p-4 text-sm"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" />You have used {pct.toFixed(0)}% of today's limit.</div>}
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           <Stat label="Opening balance" value={money.fmt(d.opening)} sub="Spending accounts" />
           <Stat label="Income received" value={money.fmt(income)} tone="success" />
@@ -59,7 +59,7 @@ export default function Daily() {
               <div className="mt-3"><Progress value={pct} tone={over ? 'danger' : pct >= 80 ? 'warning' : 'success'} /></div>
             </>) : <p className="text-sm text-muted-foreground">No daily limit yet. {d.plan.mode === 'auto' ? 'Your available funds after reserves are zero.' : 'Click Configure to set one manually or calculate it automatically.'}</p>}
             {d.plan.mode === 'auto' && (
-              <div className="mt-4 rounded-lg bg-muted p-3 text-xs text-muted-foreground">
+              <div className="mt-4 rounded-xl bg-muted p-3 text-xs text-muted-foreground">
                 <b className="text-foreground">How this is calculated:</b> (Opening balance {money.fmt(d.opening)} − reserves {money.fmt(d.reserves)}) ÷ {d.remainingDays} remaining day{d.remainingDays > 1 ? 's' : ''} (including this day, until {fmtDay(d.end, 'd MMM')}). Reserves: bills {money.fmt(d.bills)}, debt payments {money.fmt(d.debts)}, savings earmarks {money.fmt(d.savings)}{d.plan.extra_reserve_minor ? `, other ${money.fmt(d.plan.extra_reserve_minor)}` : ''}.
               </div>
             )}
@@ -72,7 +72,7 @@ export default function Daily() {
                 </div>
                 {f.mode === 'auto' && (<>
                   {f.period === 'custom' && <Field label="Period ends on"><Input type="date" min={today} value={f.end} onChange={(e) => setF({ ...f, end: e.target.value })} /></Field>}
-                  <div className="rounded-lg border border-border p-3"><p className="mb-1 text-sm font-medium">Deduct before calculating</p>
+                  <div className="rounded-xl border border-border p-3"><p className="mb-1 text-sm font-medium">Deduct before calculating</p>
                     <Toggle label="Bills due in the period" checked={f.bills} onChange={(v) => setF({ ...f, bills: v })} />
                     <Toggle label="Debt payments due in the period" checked={f.debts} onChange={(v) => setF({ ...f, debts: v })} />
                     <Toggle label="Money earmarked for savings goals" checked={f.savings} onChange={(v) => setF({ ...f, savings: v })} /></div>

@@ -83,7 +83,7 @@ function Reconcile({ acc, bal, onDone, mobile }: { acc: Account; bal: number; on
         </div>
         {diff !== null && (diff === 0
           ? <p className="flex items-center gap-2 text-sm text-success"><CheckCircle2 className="h-4 w-4" />Matches — your records are accurate.</p>
-          : <div className="space-y-2 rounded-lg border border-border bg-muted/40 p-3 text-sm">
+          : <div className="space-y-2 rounded-xl border border-border bg-muted/40 p-3 text-sm">
               <p>Difference: <b className={cn('num', diff > 0 ? 'text-success' : 'text-destructive', blur)}>{diff > 0 ? '+' : '−'}{money.fmt(Math.abs(diff))}</b> — {diff > 0 ? 'you have more than recorded (missing income or deposit?)' : 'you have less than recorded (missing expense, fee or withdrawal?)'}.</p>
               <p className="text-xs text-muted-foreground">Check recent transactions first. If you can't find the cause, post an adjustment so your balance matches.</p>
               <Button size="sm" onClick={() => setAsk(true)}>Post adjustment</Button>

@@ -97,11 +97,11 @@ function Importer({ acc, initialText, onClose }: { acc: Account; initialText?: s
     const diff = res.sms === null ? null : res.sms - res.app;
     return (<div className="space-y-4">
       <p className="flex items-center gap-2 text-sm font-medium"><CheckCircle2 className="h-4 w-4 text-success" />Imported {res.saved} transaction{res.saved === 1 ? '' : 's'} into {acc.name}.{res.fuliza && ' Fuliza balance updated in Debts.'}</p>
-      {res.failed.length > 0 && <div className="rounded-lg border border-destructive/40 p-3 text-sm"><b className="text-destructive">{res.failed.length} could not be saved</b><ul className="mt-1 list-disc pl-5 text-xs text-muted-foreground">{res.failed.slice(0, 6).map((f) => <li key={f}>{f}</li>)}</ul>
+      {res.failed.length > 0 && <div className="rounded-xl border border-destructive/40 p-3 text-sm"><b className="text-destructive">{res.failed.length} could not be saved</b><ul className="mt-1 list-disc pl-5 text-xs text-muted-foreground">{res.failed.slice(0, 6).map((f) => <li key={f}>{f}</li>)}</ul>
         {res.failed.some((f) => /insufficient/i.test(f)) && <p className="mt-2 text-xs">Tip: the account balance ran out of money. Check its starting balance, or turn on “Allow overdraft” for it.</p>}</div>}
       {diff === null ? null : diff === 0
-        ? <p className="flex items-center gap-2 rounded-lg bg-muted/50 p-3 text-sm text-success"><CheckCircle2 className="h-4 w-4" />Your balance matches the latest M-Pesa balance ({money.fmt(res.app)}).</p>
-        : <div className="space-y-2 rounded-lg border border-border bg-muted/40 p-3 text-sm"><p>Latest M-Pesa message says <b className="num">{money.fmt(res.sms!)}</b>, this app shows <b className="num">{money.fmt(res.app)}</b> — difference <b className={cn('num', diff > 0 ? 'text-success' : 'text-destructive')}>{diff > 0 ? '+' : '−'}{money.fmt(Math.abs(diff))}</b>.</p>
+        ? <p className="flex items-center gap-2 rounded-xl bg-muted/50 p-3 text-sm text-success"><CheckCircle2 className="h-4 w-4" />Your balance matches the latest M-Pesa balance ({money.fmt(res.app)}).</p>
+        : <div className="space-y-2 rounded-xl border border-border bg-muted/40 p-3 text-sm"><p>Latest M-Pesa message says <b className="num">{money.fmt(res.sms!)}</b>, this app shows <b className="num">{money.fmt(res.app)}</b> — difference <b className={cn('num', diff > 0 ? 'text-success' : 'text-destructive')}>{diff > 0 ? '+' : '−'}{money.fmt(Math.abs(diff))}</b>.</p>
           <p className="text-xs text-muted-foreground">Usually caused by messages you haven&apos;t pasted yet, or Fuliza. Paste the missing ones, or post an adjustment.</p>
           <Button size="sm" loading={busy} onClick={() => adjust(diff)}>Post adjustment</Button></div>}
       <div className="flex justify-end"><Button onClick={onClose}>Done</Button></div></div>);
@@ -113,7 +113,7 @@ function Importer({ acc, initialText, onClose }: { acc: Account; initialText?: s
   const income = categories.filter((c) => c.kind === 'income' && !c.archived_at); const expense = categories.filter((c) => c.kind === 'expense' && !c.archived_at);
   return (<div className="space-y-3">
     <p className="text-sm text-muted-foreground">Found <b>{good.length}</b> message{good.length === 1 ? '' : 's'}{dupes.size > 0 && <>, <b>{dupes.size}</b> already recorded</>}{bad.length > 0 && <>, <b>{bad.length}</b> not recognised</>}. Review, change categories, then import.</p>
-    <ul className="max-h-[46vh] divide-y divide-border overflow-y-auto rounded-lg border border-border">
+    <ul className="max-h-[46vh] divide-y divide-border overflow-y-auto rounded-xl border border-border">
       {good.map((r) => { const dupe = dupes.has(r.code); const info = r.amountMinor === 0; return (
         <li key={r.code} className={cn('flex items-start gap-3 p-3 text-sm', dupe && 'opacity-60')}>
           <input type="checkbox" className="mt-1 h-4 w-4" checked={sel.has(r.code)} disabled={dupe} aria-label={`Import ${r.code}`} onChange={(e) => setSel((s) => { const n = new Set(s); e.target.checked ? n.add(r.code) : n.delete(r.code); return n; })} />

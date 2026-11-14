@@ -115,7 +115,7 @@ export default function Home() {
         {steps.some((x) => !x.done) && (
           <Card><CardHeader title="Get started" /><CardBody className="space-y-1">
             {steps.map((x) => (
-              <Link key={x.label} href={x.href} className="flex min-h-[48px] items-center gap-3 rounded-lg px-2 py-1.5 hover:bg-muted">
+              <Link key={x.label} href={x.href} className="flex min-h-[48px] items-center gap-3 rounded-xl px-2 py-1.5 hover:bg-muted">
                 {x.done ? <CheckCircle2 className="h-5 w-5 shrink-0 text-success" /> : <Circle className="h-5 w-5 shrink-0 text-muted-foreground" />}
                 <span className="min-w-0"><span className={cn('block text-sm font-medium', x.done && 'text-muted-foreground line-through')}>{x.label}</span>{!x.done && <span className="block text-xs text-muted-foreground">{x.hint}</span>}</span>
               </Link>))}

@@ -48,12 +48,12 @@ export function Empty({ title, hint, action }: { title: string; hint?: string; a
   return <div className="flex flex-col items-center gap-2 px-4 py-10 text-center"><Inbox className="h-8 w-8 text-muted-foreground" /><p className="font-medium">{title}</p>{hint && <p className="max-w-sm text-sm text-muted-foreground">{hint}</p>}{action}</div>;
 }
 export function PageHeader({ title, desc, actions }: { title: string; desc?: string; actions?: React.ReactNode }) {
-  return <div className="mb-5 flex flex-wrap items-start justify-between gap-3"><div><h1 className="text-2xl font-semibold tracking-tight">{title}</h1>{desc && <p className="mt-1 text-sm text-muted-foreground">{desc}</p>}</div><div className="flex flex-wrap gap-2">{actions}</div></div>;
+  return <div className="mb-5 flex flex-wrap items-start justify-between gap-3"><div><h1 className="text-2xl font-bold tracking-tight">{title}</h1>{desc && <p className="mt-1 text-sm text-muted-foreground">{desc}</p>}</div><div className="flex flex-wrap gap-2">{actions}</div></div>;
 }
 export function Stat({ label, value, sub, tone, icon }: { label: string; value: React.ReactNode; sub?: React.ReactNode; tone?: 'success' | 'danger' | 'warning'; icon?: React.ReactNode }) {
   return (
     <Card className="p-4">
-      <div className="flex items-center justify-between text-xs font-medium text-muted-foreground"><span>{label}</span>{icon}</div>
+      <div className="flex items-center justify-between gap-2 text-xs font-medium text-muted-foreground"><span>{label}</span>{icon && <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-muted">{icon}</span>}</div>
       <div className={cn('num mt-2 text-xl font-semibold sm:text-2xl', tone === 'success' && 'text-success', tone === 'danger' && 'text-destructive', tone === 'warning' && 'text-warning')}>{value}</div>
       {sub && <div className="mt-1 text-xs text-muted-foreground">{sub}</div>}
     </Card>

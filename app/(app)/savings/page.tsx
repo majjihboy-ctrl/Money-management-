@@ -7,7 +7,7 @@ import { toast } from 'sonner';
 import { Plus, Pencil, PiggyBank, History } from 'lucide-react';
 import { useApp, useLoad } from '@/components/app-provider';
 import { useQuickAdd } from '@/components/quick-add';
-import { Badge, Button, Card, Empty, Field, Input, Loading, Modal, PageHeader, Progress, Select, Textarea, Stat } from '@/components/ui';
+import { Badge, Button, Card, Empty, Field, Input, Loading, Modal, PageHeader, Ring, Select, Textarea, Stat } from '@/components/ui';
 import { addDays, daysBetween, fmtDate, fmtDay, todayStr } from '@/lib/dates';
 import { goalProgress } from '@/lib/queries';
 import { inputValue } from '@/lib/money';
@@ -66,9 +66,7 @@ export default function Savings() {
             <div className="grid gap-4 md:grid-cols-2">{visible.map((g) => { const cur = data!.gp[g.id] ?? 0; const p = (cur / g.target_minor) * 100; const note = eta(g, cur, data!.entries); return (
               <Card key={g.id} className="p-4">
                 <div className="flex items-start justify-between gap-2"><div><div className="font-semibold">{g.name}</div>{g.description && <div className="text-xs text-muted-foreground">{g.description}</div>}</div><div className="flex gap-1"><Badge tone={g.priority === 'high' ? 'danger' : g.priority === 'medium' ? 'warning' : 'muted'}>{g.priority}</Badge><Badge tone={stTone[g.status]}>{g.status}</Badge></div></div>
-                <div className="num mt-3 flex items-baseline justify-between"><span className="text-xl font-semibold">{money.fmt(cur)}</span><span className="text-sm text-muted-foreground">of {money.fmt(g.target_minor)}</span></div>
-                <div className="mt-2"><Progress value={p} /></div>
-                <div className="mt-1 text-xs text-muted-foreground">{p.toFixed(1)}% · {g.target_date ? `target ${fmtDay(g.target_date, 'd MMM yyyy')}` : 'no target date'}</div>
+                <div className="mt-4 flex items-center gap-4"><Ring value={p} size={88} stroke={9} tone={p >= 100 ? 'success' : 'success'}><span className="num text-base font-bold">{Math.round(p)}%</span></Ring><div className="num min-w-0"><div className="text-xl font-bold tracking-tight">{money.fmt(cur)}</div><div className="text-sm text-muted-foreground">of {money.fmt(g.target_minor)}</div><div className="mt-1 text-xs text-muted-foreground">{g.target_date ? `target ${fmtDay(g.target_date, 'd MMM yyyy')}` : 'no target date'}</div></div></div>
                 {note && <div className="mt-1 text-xs text-muted-foreground">{note}</div>}
                 <div className="mt-3 flex flex-wrap gap-2">
                   {g.status === 'active' && <><Button size="sm" onClick={() => qa.open('savings', undefined, { goal: g.id })}>Contribute</Button><Button size="sm" variant="outline" onClick={() => qa.open('savings', undefined, { goal: g.id, type: 'withdrawal' })}>Withdraw</Button></>}

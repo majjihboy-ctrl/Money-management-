@@ -34,7 +34,7 @@ export default function CalendarPage() {
         <Card className="p-2">
           <div className="grid grid-cols-7 gap-1 text-center text-xs text-muted-foreground">{['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((d) => <div key={d} className="py-1">{d}</div>)}</div>
           <div className="grid grid-cols-7 gap-1">{cells.map((day, i) => { if (!day) return <div key={i} />; const p = per(day); return (
-            <button key={day} onClick={() => setSel(day)} aria-label={fmtDay(day, 'd MMMM')} className={cn('flex min-h-[64px] flex-col items-start rounded-md border p-1 text-left text-[10px] sm:min-h-[84px] sm:p-1.5', sel === day ? 'border-primary bg-primary/5' : 'border-border hover:bg-muted', day === today && 'ring-1 ring-primary')}>
+            <button key={day} onClick={() => setSel(day)} aria-label={fmtDay(day, 'd MMMM')} className={cn('flex min-h-[64px] flex-col items-start rounded-xl border p-1 text-left text-[10px] sm:min-h-[84px] sm:p-1.5', sel === day ? 'border-primary bg-primary/5' : 'border-border hover:bg-muted', day === today && 'ring-1 ring-primary')}>
               <span className="text-xs font-medium">{Number(day.slice(8))}</span>
               {p.inc > 0 && <span className="num w-full truncate text-success">+{money.fmtC(p.inc)}</span>}{p.exp > 0 && <span className="num w-full truncate text-destructive">−{money.fmtC(p.exp)}</span>}
               <span className="mt-auto flex gap-0.5">{p.bills > 0 && <i className="h-1.5 w-1.5 rounded-full bg-amber-500" title="Bill" />}{p.debts > 0 && <i className="h-1.5 w-1.5 rounded-full bg-purple-500" title="Debt due" />}{p.goals > 0 && <i className="h-1.5 w-1.5 rounded-full bg-blue-500" title="Goal date" />}</span>

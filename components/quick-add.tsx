@@ -177,7 +177,7 @@ function TxnForm({ kind, initial, preset, onDone }: { kind: 'income' | 'expense'
       </div>}
       <Field label="Description"><Input {...f.register('description')} placeholder="Optional" /></Field>
       {kind === 'expense' && (
-        <div className="space-y-2 rounded-lg border border-border p-3">
+        <div className="space-y-2 rounded-xl border border-border p-3">
           <Toggle label="Essential expense" checked={f.watch('is_essential')} onChange={(v) => f.setValue('is_essential', v)} />
           <Toggle label="Recurring expense" checked={f.watch('is_recurring')} onChange={(v) => f.setValue('is_recurring', v)} />
           <Toggle label="Split across categories" checked={split} onChange={(v) => f.setValue('split', v)} />
