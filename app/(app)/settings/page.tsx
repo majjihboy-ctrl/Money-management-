@@ -102,7 +102,7 @@ function DataPrivacy() {
   async function hide(v: boolean) { const { error } = await sb.from('profiles').update({ privacy: { ...profile.privacy, hide_balances: v } }).eq('id', profile.id); if (error) return void toast.error(errMsg(error)); refresh(); }
   async function del() {
     setBusy(true);
-    try { const r = await fetch('/api/account/delete', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ confirm: txt }) }); const j = await r.json().catch(() => ({})); if (!r.ok) throw new Error(j.error ?? 'Deletion failed');
+    try { const r = await fetch('/api/account/delete', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ confirm: txt.trim() }) }); const j = await r.json().catch(() => ({})); if (!r.ok) throw new Error(j.error ?? 'Deletion failed');
       await sb.auth.signOut(); window.location.href = '/login'; } catch (e) { toast.error(errMsg(e)); setBusy(false); }
   }
   return (
@@ -110,7 +110,7 @@ function DataPrivacy() {
       <Toggle label="Hide balances on screen (blur amounts on dashboard and accounts)" checked={!!profile.privacy?.hide_balances} onChange={hide} />
       <div className="flex flex-wrap gap-2"><a href="/api/export" download><Button variant="outline"><Download className="h-4 w-4" />Export my data (JSON)</Button></a></div>
       <div className="rounded-lg border border-destructive/40 p-4"><div className="font-medium text-destructive">Delete account</div><p className="mt-1 text-sm text-muted-foreground">Permanently deletes your login and all financial data, receipts and photos. This cannot be undone. Export your data first.</p><Button variant="destructive" className="mt-3" onClick={() => setOpen(true)}><Archive className="h-4 w-4" />Delete my account</Button></div>
-      <Modal open={open} onClose={() => setOpen(false)} title="Delete account permanently?"><div className="space-y-4"><p className="text-sm text-muted-foreground">Type <b>DELETE</b> to confirm.</p><Input value={txt} onChange={(e) => setTxt(e.target.value)} aria-label="Type DELETE" /><div className="flex justify-end gap-2"><Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button><Button variant="destructive" disabled={txt !== 'DELETE'} loading={busy} onClick={del}>Delete everything</Button></div></div></Modal>
+      <Modal open={open} onClose={() => setOpen(false)} title="Delete account permanently?"><div className="space-y-4"><p className="text-sm text-muted-foreground">Type <b>DELETE</b> to confirm.</p><Input value={txt} onChange={(e) => setTxt(e.target.value)} aria-label="Type DELETE" autoCapitalize="characters" autoCorrect="off" autoComplete="off" spellCheck={false} /><div className="flex justify-end gap-2"><Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button><Button variant="destructive" disabled={txt.trim().toUpperCase() !== 'DELETE'} loading={busy} onClick={del}>Delete everything</Button></div></div></Modal>
     </CardBody></Card>
   );
 }
