@@ -1,97 +1,165 @@
 'use client';
 import Link from 'next/link';
 import { useState } from 'react';
-import { Wallet, TrendingUp, TrendingDown, ArrowUpDown, PiggyBank, Landmark, Target, CalendarDays } from 'lucide-react';
+import { toast } from 'sonner';
+import { ArrowDownLeft, ArrowUpRight, ArrowLeftRight, ChevronDown, CheckCircle2, Circle, AlertTriangle, Eye, EyeOff } from 'lucide-react';
 import { useApp, useLoad } from '@/components/app-provider';
-import { DateFilter, initFilter, filterLabel, type FilterState } from '@/components/date-filter';
+import { useQuickAdd } from '@/components/quick-add';
+import { MpesaImportButton } from '@/components/mpesa-import';
+import { DateFilter, initFilter, type FilterState } from '@/components/date-filter';
 import { Bars, Lines, Pie1 } from '@/components/charts';
-import { Badge, Card, CardBody, CardHeader, Empty, Loading, PageHeader, Progress, Skeleton, Stat } from '@/components/ui';
+import { Badge, Card, CardBody, CardHeader, Empty, Progress, Skeleton } from '@/components/ui';
 import { addDays, addMonths, dayOf, eachDay, fmtDate, fmtDay, startOfMonth, todayStr } from '@/lib/dates';
-import { fetchTxns, goalProgress, loadBudgets } from '@/lib/queries';
-import { summarize, isExpense } from '@/lib/calc';
-import type { Debt, Goal, Occurrence, Rule } from '@/lib/types';
-import { cn } from '@/lib/utils';
+import { fetchTxns, loadBudgets } from '@/lib/queries';
+import { summarize } from '@/lib/calc';
+import type { Occurrence, Rule } from '@/lib/types';
+import { cn, errMsg } from '@/lib/utils';
 
-export default function Dashboard() {
-  const { sb, tz, money, accounts, categories, balances, hide } = useApp();
+const IN = ['income', 'deposit', 'transfer_in', 'debt_collection'];
+
+export default function Home() {
+  const { sb, tz, money, accounts, categories, balances, hide, profile, refresh } = useApp();
+  const qa = useQuickAdd();
   const [filter, setFilter] = useState<FilterState>(initFilter(tz, 'month'));
-  const today = todayStr(tz);
+  const [details, setDetails] = useState(false);
+  const today = todayStr(tz); const monthFrom = startOfMonth(today);
   const { data: d, loading, error } = useLoad(async () => {
-    const since = [filter.from, addMonths(startOfMonth(today), -5)].sort()[0];
-    const [txns, budgets, gp, goals, debts, occ, rules] = await Promise.all([
-      fetchTxns(sb, tz, since), loadBudgets(sb, tz, today), goalProgress(sb),
-      sb.from('savings_goals').select('*').eq('status', 'active').order('target_date', { nullsFirst: false }),
-      sb.from('debts').select('*').eq('status', 'active').eq('direction', 'payable'),
-      sb.from('recurring_occurrences').select('*').eq('state', 'pending').lte('due_date', addDays(today, 14)).order('due_date'),
+    const since = [filter.from, addMonths(monthFrom, -5)].sort()[0];
+    const [txns, budgets, occ, rules] = await Promise.all([
+      fetchTxns(sb, tz, since), loadBudgets(sb, tz, today),
+      sb.from('recurring_occurrences').select('*').eq('state', 'pending').lte('due_date', addDays(today, 7)).order('due_date'),
       sb.from('recurring_rules').select('*'),
     ]);
-    return { txns, budgets, gp, goals: (goals.data ?? []) as Goal[], debts: (debts.data ?? []) as Debt[], occ: (occ.data ?? []) as Occurrence[], rules: (rules.data ?? []) as Rule[] };
+    return { txns, budgets, occ: (occ.data ?? []) as Occurrence[], rules: (rules.data ?? []) as Rule[] };
   }, [filter.from, filter.to]);
 
-  if (error) return <Empty title="Could not load dashboard" hint={error} />;
-  const catName = (id: string | null) => categories.find((c) => c.id === id)?.name ?? 'Uncategorised';
-  const spendIds = new Set(accounts.filter((a) => !a.archived_at && a.type !== 'savings').map((a) => a.id));
-  const available = [...spendIds].reduce((s, id) => s + (balances[id] ?? 0), 0);
-  const savingsBal = accounts.filter((a) => !a.archived_at && a.type === 'savings').reduce((s, a) => s + (balances[a.id] ?? 0), 0);
   const blur = hide ? 'blur-sm select-none' : '';
+  const live = accounts.filter((a) => !a.archived_at).sort((a, b) => Number(b.type === 'mobile_money') - Number(a.type === 'mobile_money'));
+  const spendIds = new Set(live.filter((a) => a.type !== 'savings').map((a) => a.id));
+  const available = [...spendIds].reduce((s, id) => s + (balances[id] ?? 0), 0);
+  const mpesa = live.find((a) => a.type === 'mobile_money');
+  const catName = (id: string | null) => categories.find((c) => c.id === id)?.name ?? 'Uncategorised';
+  async function toggleHide() {
+    const { error: e } = await sb.from('profiles').update({ privacy: { ...profile.privacy, hide_balances: !hide } }).eq('id', profile.id);
+    if (e) return void toast.error(errMsg(e)); refresh();
+  }
+  const first = profile.full_name ? profile.full_name.split(' ')[0] : null;
+  const hour = Number(new Intl.DateTimeFormat('en-GB', { hour: 'numeric', hour12: false, timeZone: tz }).format(new Date()));
+  const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
 
-  let body: React.ReactNode = <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} className="h-24" />)}</div>;
-  if (d) {
-    const inRange = d.txns.filter((t) => { const x = dayOf(t.occurred_at, tz); return x >= filter.from && x <= filter.to; });
-    const s = summarize(inRange, catName, tz);
-    const todaySpend = d.txns.filter((t) => isExpense(t.kind) && dayOf(t.occurred_at, tz) === today).reduce((a, t) => a + t.amount_minor, 0);
-    const outstanding = d.debts.reduce((a, x) => a + x.outstanding_minor, 0);
-    const monthly = d.budgets.filter((b) => b.period === 'monthly' && !b.category_id);
-    const mAmt = monthly.reduce((a, b) => a + b.amount_minor, 0), mSpent = monthly.reduce((a, b) => a + b.spent, 0);
-    const days = eachDay(filter.from, filter.to);
-    const byMonth = days.length > 62;
-    const bucket = (day: string) => (byMonth ? day.slice(0, 7) : day);
-    const map = new Map<string, { income: number; expense: number }>();
-    for (const x of s.byDay) { const k = bucket(x.date); const v = map.get(k) ?? { income: 0, expense: 0 }; v.income += x.income; v.expense += x.expense; map.set(k, v); }
-    const flow = [...map.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([k, v]) => ({ label: byMonth ? fmtDay(k + '-01', 'MMM yy') : fmtDay(k, 'd MMM'), Income: money.major(v.income), Expenses: money.major(v.expense) }));
-    const daily = s.byDay.filter((x) => x.expense > 0).map((x) => ({ label: fmtDay(x.date, 'd MMM'), Spending: money.major(x.expense) }));
-    const m6 = Array.from({ length: 6 }, (_, i) => addMonths(startOfMonth(today), i - 5));
-    const cash = m6.map((m) => { const k = m.slice(0, 7); const sm = summarize(d.txns.filter((t) => dayOf(t.occurred_at, tz).startsWith(k)), catName, tz); return { label: fmtDay(m, 'MMM'), 'Net cash flow': money.major(sm.net) }; });
-    const spendTx = d.txns.filter((t) => spendIds.has(t.account_id));
-    const hist = days.filter((x) => x <= today).filter((_, i, a) => a.length <= 90 || i % Math.ceil(a.length / 90) === 0 || i === a.length - 1).map((day) => ({
-      label: fmtDay(day, 'd MMM'), Balance: money.major(available - spendTx.filter((t) => dayOf(t.occurred_at, tz) > day).reduce((a, t) => a + t.signed_amount_minor, 0)),
-    }));
-    const rm = new Map(d.rules.map((r) => [r.id, r]));
-    const upcoming = d.occ.map((o) => ({ o, r: rm.get(o.rule_id)! })).filter((x) => x.r);
-    body = (
-      <>
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-          <Stat label="Available balance" value={<span className={blur}>{money.fmt(available)}</span>} sub="Spending accounts" icon={<Wallet className="h-4 w-4" />} />
-          <Stat label={`Income · ${filterLabel(filter)}`} value={<span className={blur}>{money.fmt(s.income)}</span>} tone="success" icon={<TrendingUp className="h-4 w-4" />} />
-          <Stat label={`Expenses · ${filterLabel(filter)}`} value={<span className={blur}>{money.fmt(s.expense)}</span>} tone="danger" icon={<TrendingDown className="h-4 w-4" />} />
-          <Stat label="Net cash flow" value={<span className={blur}>{money.fmt(s.net)}</span>} tone={s.net >= 0 ? 'success' : 'danger'} sub={s.savingsRate === null ? 'Savings rate: n/a (no income)' : `Savings rate ${s.savingsRate.toFixed(1)}%`} icon={<ArrowUpDown className="h-4 w-4" />} />
-          <Stat label="Total savings" value={<span className={blur}>{money.fmt(savingsBal)}</span>} sub="Savings accounts" icon={<PiggyBank className="h-4 w-4" />} />
-          <Stat label="Outstanding debt" value={<span className={blur}>{money.fmt(outstanding)}</span>} sub={`${d.debts.length} active`} icon={<Landmark className="h-4 w-4" />} />
-          <Stat label="Monthly budget left" value={monthly.length ? <span className={blur}>{money.fmt(mAmt - mSpent)}</span> : '—'} tone={monthly.length && mAmt - mSpent < 0 ? 'danger' : undefined} sub={monthly.length ? `${money.fmt(mSpent)} of ${money.fmt(mAmt)} used` : 'No monthly budget set'} icon={<Target className="h-4 w-4" />} />
-          <Stat label="Today's spending" value={<span className={blur}>{money.fmt(todaySpend)}</span>} sub={<Link href="/daily" className="underline">Daily tracker</Link>} icon={<CalendarDays className="h-4 w-4" />} />
-        </div>
-        <div className="mt-4 grid gap-4 lg:grid-cols-2">
-          <Card><CardHeader title="Income vs expenses" /><CardBody><Bars data={flow} series={[{ key: 'Income', color: '#10b981' }, { key: 'Expenses', color: '#ef4444' }]} /></CardBody></Card>
-          <Card><CardHeader title="Daily spending" /><CardBody><Bars data={daily} series={[{ key: 'Spending', color: '#f59e0b' }]} /></CardBody></Card>
-          <Card><CardHeader title="Monthly cash flow (6 months)" /><CardBody><Bars data={cash} series={[{ key: 'Net cash flow', color: '#3b82f6' }]} /></CardBody></Card>
-          <Card><CardHeader title="Expense breakdown" /><CardBody><Pie1 data={s.byCat.slice(0, 8).map((x) => ({ name: x.name, value: money.major(x.value) }))} /></CardBody></Card>
-          <Card><CardHeader title="Balance history" /><CardBody><Lines data={hist} series={[{ key: 'Balance', color: '#10b981' }]} /></CardBody></Card>
-          <Card><CardHeader title="Budget utilisation" action={<Link href="/budgets" className="text-xs underline">Manage</Link>} />
-            <CardBody className="space-y-3">{d.budgets.length ? d.budgets.slice(0, 5).map((b) => (
-              <div key={b.id}><div className="mb-1 flex justify-between text-sm"><span>{b.name}</span><Badge tone={b.status === 'Exceeded' ? 'danger' : b.status === 'On Track' ? 'success' : 'warning'}>{b.status}</Badge></div><Progress value={b.pct} tone={b.pct >= 100 ? 'danger' : b.pct >= 75 ? 'warning' : 'success'} /><div className="num mt-1 text-xs text-muted-foreground">{money.fmt(b.spent)} / {money.fmt(b.amount_minor)} ({b.pct.toFixed(0)}%)</div></div>
-            )) : <Empty title="No active budgets" hint="Create a budget to track spending limits." />}</CardBody></Card>
-          <Card><CardHeader title="Savings progress" action={<Link href="/savings" className="text-xs underline">All goals</Link>} />
-            <CardBody className="space-y-3">{d.goals.length ? d.goals.slice(0, 4).map((g) => { const cur = d.gp[g.id] ?? 0; const p = (cur / g.target_minor) * 100; return (
-              <div key={g.id}><div className="mb-1 flex justify-between text-sm"><span>{g.name}</span><span className="num text-muted-foreground">{p.toFixed(0)}%</span></div><Progress value={p} /><div className="num mt-1 text-xs text-muted-foreground">{money.fmt(cur)} of {money.fmt(g.target_minor)}{g.target_date ? ` · by ${fmtDay(g.target_date, 'd MMM yyyy')}` : ''}</div></div>); }) : <Empty title="No active goals" hint="Set a savings goal to start tracking progress." />}</CardBody></Card>
-          <Card><CardHeader title="Upcoming bills & expected income" action={<Link href="/bills" className="text-xs underline">Bills</Link>} />
-            <CardBody>{upcoming.length ? <ul className="divide-y divide-border">{upcoming.slice(0, 6).map(({ o, r }) => (
-              <li key={o.id} className="flex items-center justify-between py-2 text-sm"><div><div className="font-medium">{r.name}</div><div className={cn('text-xs', o.due_date < today ? 'text-destructive' : 'text-muted-foreground')}>{o.due_date < today ? 'Overdue · ' : ''}{fmtDay(o.due_date)}</div></div><span className={cn('num', r.kind === 'income' && 'text-success')}>{r.kind === 'income' ? '+' : ''}{money.fmt(r.amount_minor)}</span></li>))}</ul> : <Empty title="Nothing due in the next 14 days" />}</CardBody></Card>
-          <Card><CardHeader title="Recent transactions" action={<Link href="/transactions" className="text-xs underline">View all</Link>} />
-            <CardBody>{inRange.length ? <ul className="divide-y divide-border">{inRange.slice(0, 8).map((t) => (
-              <li key={t.id} className="flex items-center justify-between gap-2 py-2 text-sm"><div className="min-w-0"><div className="truncate font-medium">{t.description || t.counterparty || catName(t.category_id)}</div><div className="text-xs text-muted-foreground">{fmtDate(t.occurred_at, tz, 'd MMM, HH:mm')}</div></div><span className={cn('num shrink-0', ['income', 'deposit', 'transfer_in', 'debt_collection'].includes(t.kind) ? 'text-success' : '', blur)}>{['income', 'deposit', 'transfer_in', 'debt_collection'].includes(t.kind) ? '+' : '−'}{money.fmt(t.amount_minor)}</span></li>))}</ul> : <Empty title="No transactions in this period" hint="Use the + button to add your first transaction." />}</CardBody></Card>
-        </div>
-      </>
-    );
-  } else if (!loading) body = <Loading />;
-  return <><PageHeader title="Dashboard" desc="Your financial position at a glance." /><div className="mb-4"><DateFilter value={filter} onChange={setFilter} tz={tz} /></div>{body}</>;
+  if (error) return <Empty title="Could not load your home screen" hint={error} />;
+  const month = d ? summarize(d.txns.filter((t) => dayOf(t.occurred_at, tz) >= monthFrom), catName, tz) : null;
+  const monthly = d ? d.budgets.filter((b) => b.period === 'monthly' && !b.category_id) : [];
+  const mAmt = monthly.reduce((a, b) => a + b.amount_minor, 0), mSpent = monthly.reduce((a, b) => a + b.spent, 0);
+  const rm = new Map((d?.rules ?? []).map((r) => [r.id, r]));
+  const due = (d?.occ ?? []).map((o) => ({ o, r: rm.get(o.rule_id)! })).filter((x) => x.r);
+  const budgetAlerts = (d?.budgets ?? []).filter((b) => b.pct >= 90);
+  const needs = due.length + budgetAlerts.length;
+  const steps = d ? [
+    { done: !!mpesa, label: 'Add your M-Pesa account', hint: 'Accounts → New account → M-Pesa', href: '/accounts' },
+    { done: d.txns.length > 0, label: 'Add your first transactions', hint: 'Paste your M-Pesa messages, or tap Expense / Income', href: mpesa ? `/accounts/${mpesa.id}` : '/accounts' },
+    { done: monthly.length > 0, label: 'Set a monthly budget', hint: 'See how much you can still spend', href: '/budgets' },
+  ] : [];
+
+  return (
+    <div className="space-y-5">
+      <div>
+        <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">{greeting}{first ? `, ${first}` : ''}</h1>
+        <p className="text-sm text-muted-foreground">{fmtDay(today, 'EEEE d MMMM')}</p>
+      </div>
+
+      <Card className="bg-primary text-primary-foreground">
+        <CardBody>
+          <div className="flex items-center justify-between text-sm opacity-90"><span>Money you have</span>
+            <button onClick={toggleHide} className="inline-flex h-10 w-10 items-center justify-center rounded-full hover:bg-white/10" aria-label={hide ? 'Show amounts' : 'Hide amounts'}>{hide ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}</button></div>
+          <div className={cn('num -mt-1 text-4xl font-bold tracking-tight', blur)}>{money.fmt(available)}</div>
+          <div className="mt-1 text-sm opacity-90">{month ? <span className={blur}>This month: +{money.fmt(month.income)} in · −{money.fmt(month.expense)} out</span> : 'Loading…'}</div>
+        </CardBody>
+      </Card>
+
+      <div className="grid grid-cols-3 gap-2 sm:gap-3">
+        {([['income', 'Income', ArrowDownLeft, 'text-success'], ['expense', 'Expense', ArrowUpRight, 'text-destructive'], ['transfer', 'Transfer', ArrowLeftRight, 'text-foreground']] as const).map(([m, label, Icon, c]) => (
+          <button key={m} onClick={() => qa.open(m)} className="flex min-h-[72px] flex-col items-center justify-center gap-1.5 rounded-xl border border-border bg-card text-sm font-medium shadow-sm active:scale-[0.98] hover:bg-muted"><Icon className={cn('h-6 w-6', c)} />{label}</button>
+        ))}
+      </div>
+      {mpesa && <div className="flex items-center justify-between gap-3 rounded-xl border border-dashed border-border bg-card p-3 text-sm"><span className="text-muted-foreground">Got new M-Pesa messages?</span><MpesaImportButton acc={mpesa} variant="default" /></div>}
+
+      {live.length > 0 && (
+        <section aria-label="Your accounts">
+          <div className="mb-2 flex items-center justify-between"><h2 className="text-sm font-semibold">Your accounts</h2><Link href="/accounts" className="text-xs underline">Manage</Link></div>
+          <div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-1">
+            {live.map((a) => (
+              <Link key={a.id} href={`/accounts/${a.id}`} className="min-w-[10.5rem] shrink-0 rounded-xl border border-border bg-card p-3 shadow-sm hover:bg-muted">
+                <div className="truncate text-xs text-muted-foreground">{a.name}</div>
+                <div className={cn('num mt-1 text-lg font-semibold', blur)}>{money.fmt(balances[a.id] ?? 0)}</div>
+              </Link>))}
+          </div>
+        </section>
+      )}
+
+      {!d && !loading ? null : !d ? <Skeleton className="h-40" /> : (<>
+        {steps.some((x) => !x.done) && (
+          <Card><CardHeader title="Get started" /><CardBody className="space-y-1">
+            {steps.map((x) => (
+              <Link key={x.label} href={x.href} className="flex min-h-[48px] items-center gap-3 rounded-lg px-2 py-1.5 hover:bg-muted">
+                {x.done ? <CheckCircle2 className="h-5 w-5 shrink-0 text-success" /> : <Circle className="h-5 w-5 shrink-0 text-muted-foreground" />}
+                <span className="min-w-0"><span className={cn('block text-sm font-medium', x.done && 'text-muted-foreground line-through')}>{x.label}</span>{!x.done && <span className="block text-xs text-muted-foreground">{x.hint}</span>}</span>
+              </Link>))}
+          </CardBody></Card>
+        )}
+
+        <Card><CardHeader title={`${fmtDay(today, 'MMMM')} so far`} action={<Link href="/budgets" className="text-xs underline">Budgets</Link>} /><CardBody className="space-y-4">
+          <div className="grid grid-cols-3 gap-2 text-center">
+            <div><div className="text-xs text-muted-foreground">Came in</div><div className={cn('num text-base font-semibold text-success sm:text-lg', blur)}>{money.fmt(month!.income)}</div></div>
+            <div><div className="text-xs text-muted-foreground">Spent</div><div className={cn('num text-base font-semibold text-destructive sm:text-lg', blur)}>{money.fmt(month!.expense)}</div></div>
+            <div><div className="text-xs text-muted-foreground">Left over</div><div className={cn('num text-base font-semibold sm:text-lg', month!.net < 0 && 'text-destructive', blur)}>{money.fmt(month!.net)}</div></div>
+          </div>
+          {monthly.length > 0 ? (
+            <div><div className="mb-1 flex justify-between text-sm"><span>Monthly budget</span><span className={cn('num text-muted-foreground', blur)}>{mAmt - mSpent >= 0 ? `${money.fmt(mAmt - mSpent)} left` : `${money.fmt(mSpent - mAmt)} over`}</span></div>
+              <Progress value={(mSpent / mAmt) * 100} tone={mSpent > mAmt ? 'danger' : mSpent / mAmt >= 0.75 ? 'warning' : 'success'} /></div>
+          ) : <p className="text-xs text-muted-foreground">Set a monthly budget to see how much you can still spend.</p>}
+        </CardBody></Card>
+
+        {needs > 0 && (
+          <Card><CardHeader title="Needs your attention" /><CardBody className="space-y-2">
+            {budgetAlerts.slice(0, 3).map((b) => <Link key={b.id} href="/budgets" className="flex items-center gap-3 rounded-lg bg-warning/10 p-3 text-sm"><AlertTriangle className="h-5 w-5 shrink-0 text-warning" /><span className="min-w-0 flex-1"><b>{b.name}</b> budget {b.pct >= 100 ? 'is used up' : `is ${b.pct.toFixed(0)}% used`}</span></Link>)}
+            {due.slice(0, 4).map(({ o, r }) => <Link key={o.id} href="/bills" className="flex items-center justify-between gap-3 rounded-lg border border-border p-3 text-sm"><span className="min-w-0"><span className="block truncate font-medium">{r.name}</span><span className={cn('text-xs', o.due_date < today ? 'text-destructive' : 'text-muted-foreground')}>{o.due_date < today ? 'Overdue · ' : 'Due '}{fmtDay(o.due_date)}</span></span><span className={cn('num shrink-0', r.kind === 'income' && 'text-success', blur)}>{r.kind === 'income' ? '+' : ''}{money.fmt(r.amount_minor)}</span></Link>)}
+          </CardBody></Card>
+        )}
+
+        <Card><CardHeader title="Recent activity" action={<Link href="/transactions" className="text-xs underline">See all</Link>} /><CardBody>
+          {d.txns.length ? <ul className="divide-y divide-border">{d.txns.slice(0, 6).map((t) => { const inc = IN.includes(t.kind); return (
+            <li key={t.id} className="flex items-center justify-between gap-3 py-2.5 text-sm"><div className="min-w-0"><div className="truncate font-medium">{t.description || t.counterparty || catName(t.category_id)}</div><div className="text-xs text-muted-foreground">{fmtDate(t.occurred_at, tz, 'd MMM, HH:mm')}{t.category_id ? ` · ${catName(t.category_id)}` : ''}</div></div>
+              <span className={cn('num shrink-0 font-medium', inc && 'text-success', blur)}>{inc ? '+' : '−'}{money.fmt(t.amount_minor)}</span></li>); })}</ul>
+            : <Empty title="Nothing yet" hint="Tap Income or Expense above, or import your M-Pesa messages." />}
+        </CardBody></Card>
+
+        <button onClick={() => setDetails((v) => !v)} aria-expanded={details} className="flex min-h-[48px] w-full items-center justify-between rounded-xl border border-border bg-card px-4 text-sm font-medium shadow-sm hover:bg-muted">
+          Charts &amp; trends<ChevronDown className={cn('h-5 w-5 transition-transform', details && 'rotate-180')} /></button>
+        {details && <Details d={d} filter={filter} setFilter={setFilter} available={available} spendIds={spendIds} catName={catName} />}
+      </>)}
+    </div>
+  );
+}
+
+function Details({ d, filter, setFilter, available, spendIds, catName }: { d: NonNullable<ReturnType<typeof useLoad<any>>['data']>; filter: FilterState; setFilter: (f: FilterState) => void; available: number; spendIds: Set<string>; catName: (id: string | null) => string }) {
+  const { tz, money } = useApp(); const today = todayStr(tz);
+  const inRange = d.txns.filter((t: any) => { const x = dayOf(t.occurred_at, tz); return x >= filter.from && x <= filter.to; });
+  const s = summarize(inRange, catName, tz);
+  const days = eachDay(filter.from, filter.to); const byMonth = days.length > 62; const bucket = (day: string) => (byMonth ? day.slice(0, 7) : day);
+  const map = new Map<string, { income: number; expense: number }>();
+  for (const x of s.byDay) { const k = bucket(x.date); const v = map.get(k) ?? { income: 0, expense: 0 }; v.income += x.income; v.expense += x.expense; map.set(k, v); }
+  const flow = [...map.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([k, v]) => ({ label: byMonth ? fmtDay(k + '-01', 'MMM yy') : fmtDay(k, 'd MMM'), Income: money.major(v.income), Expenses: money.major(v.expense) }));
+  const spendTx = d.txns.filter((t: any) => spendIds.has(t.account_id));
+  const hist = days.filter((x) => x <= today).filter((_, i, a) => a.length <= 90 || i % Math.ceil(a.length / 90) === 0 || i === a.length - 1).map((day) => ({
+    label: fmtDay(day, 'd MMM'), Balance: money.major(available - spendTx.filter((t: any) => dayOf(t.occurred_at, tz) > day).reduce((a: number, t: any) => a + t.signed_amount_minor, 0)) }));
+  return (
+    <div className="space-y-4">
+      <DateFilter value={filter} onChange={setFilter} tz={tz} />
+      <Card><CardHeader title="Income vs expenses" action={<Badge>{money.fmt(s.net)} net</Badge>} /><CardBody><Bars data={flow} series={[{ key: 'Income', color: '#10b981' }, { key: 'Expenses', color: '#ef4444' }]} /></CardBody></Card>
+      <Card><CardHeader title="Where your money went" /><CardBody><Pie1 data={s.byCat.slice(0, 8).map((x) => ({ name: x.name, value: money.major(x.value) }))} /></CardBody></Card>
+      <Card><CardHeader title="Balance over time" /><CardBody><Lines data={hist} series={[{ key: 'Balance', color: '#10b981' }]} /></CardBody></Card>
+      <p className="text-center text-xs text-muted-foreground">More reports are under <Link href="/reports" className="underline">Reports</Link>.</p>
+    </div>
+  );
 }
