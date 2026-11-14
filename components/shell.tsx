@@ -2,9 +2,9 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
-import { Home, ReceiptText, Target, Wallet, BarChart3, Bell, Settings, LogOut, Menu, PanelLeftClose, PanelLeftOpen, Moon, Sun, X, Wallet2 } from 'lucide-react';
+import { Home, ReceiptText, Target, Wallet, BarChart3, Bell, Settings, LogOut, Menu, PanelLeftClose, PanelLeftOpen, Moon, Sun, X, Wallet2, Plus } from 'lucide-react';
 import { useApp } from './app-provider';
-import { QuickAddProvider } from './quick-add';
+import { QuickAddProvider, useQuickAdd } from './quick-add';
 import { Button } from './ui';
 import { cn } from '@/lib/utils';
 import { syncNotifications } from '@/lib/notify';
@@ -19,11 +19,11 @@ const GROUPS: Group[] = [
   { label: 'Accounts', href: '/accounts', icon: Wallet, match: ['/accounts'] },
   { label: 'Plan', href: '/budgets', icon: Target, match: ['/budgets', '/savings', '/debts', '/bills'],
     tabs: [{ href: '/budgets', label: 'Budgets' }, { href: '/savings', label: 'Savings' }, { href: '/debts', label: 'Debts' }, { href: '/bills', label: 'Bills' }] },
-  { label: 'Reports', href: '/reports', icon: BarChart3, match: ['/reports', '/insights', '/calendar'],
-    tabs: [{ href: '/reports', label: 'Reports' }, { href: '/insights', label: 'Insights' }, { href: '/calendar', label: 'Calendar' }] },
+  { label: 'Insights', href: '/insights', icon: BarChart3, match: ['/insights', '/reports', '/calendar'],
+    tabs: [{ href: '/insights', label: 'Insights' }, { href: '/reports', label: 'Reports' }, { href: '/calendar', label: 'Calendar' }] },
 ];
 const EXTRA = [{ href: '/notifications', label: 'Notifications', icon: Bell }, { href: '/settings', label: 'Settings', icon: Settings }];
-const MOBILE = ['Home', 'Activity', 'Accounts', 'Plan'];
+const MOBILE = ['Home', 'Activity', 'Plan', 'Insights'];
 const inGroup = (path: string, g: Group) => g.match.some((m) => path === m || path.startsWith(m + '/'));
 
 function SectionTabs({ path }: { path: string }) {
@@ -32,12 +32,17 @@ function SectionTabs({ path }: { path: string }) {
     <nav aria-label={`${g.label} sections`} className="no-print -mx-1 mb-4 flex gap-1.5 overflow-x-auto px-1 pb-1">
       {g.tabs.map((t) => { const a = path === t.href || path.startsWith(t.href + '/'); return (
         <Link key={t.href} href={t.href} aria-current={a ? 'page' : undefined}
-          className={cn('inline-flex min-h-[40px] shrink-0 items-center rounded-full px-4 text-sm font-medium', a ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:text-foreground')}>{t.label}</Link>); })}
+          className={cn('inline-flex min-h-[40px] shrink-0 items-center rounded-full px-4 text-sm font-medium transition-colors', a ? 'bg-primary text-primary-foreground shadow-sm' : 'bg-muted text-muted-foreground hover:text-foreground')}>{t.label}</Link>); })}
     </nav>
   );
 }
 
 export function Shell({ children }: { children: React.ReactNode }) {
+  return <QuickAddProvider><ShellInner>{children}</ShellInner></QuickAddProvider>;
+}
+
+function ShellInner({ children }: { children: React.ReactNode }) {
+  const qa = useQuickAdd();
   const { sb, profile, unread, tick, accounts, refresh, reloadProfile } = useApp();
   const path = usePathname(); const router = useRouter();
   const [collapsed, setCollapsed] = useState(false);
@@ -56,47 +61,55 @@ export function Shell({ children }: { children: React.ReactNode }) {
   }
   const link = (n: { href: string; label: string; icon: typeof Home }, active: boolean, compact: boolean) => (
     <Link key={n.href} href={n.href} title={n.label} aria-current={active ? 'page' : undefined}
-      className={cn('flex min-h-[44px] items-center gap-3 rounded-md px-3 py-2 text-sm font-medium', active ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-muted hover:text-foreground', compact && 'justify-center px-2')}>
+      className={cn('flex min-h-[44px] items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition-colors', active ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-muted hover:text-foreground', compact && 'justify-center px-2')}>
       <span className="relative"><n.icon className="h-5 w-5" />{n.href === '/notifications' && unread > 0 && <span className="absolute -right-1.5 -top-1.5 h-2 w-2 rounded-full bg-destructive" />}</span>
       {!compact && <span>{n.label}</span>}
     </Link>
   );
-  const moreActive = !GROUPS.filter((g) => MOBILE.includes(g.label)).some((g) => inGroup(path, g));
   return (
-    <QuickAddProvider>
+    <>
       <div className="min-h-screen md:flex">
-        <aside className={cn('no-print sticky top-0 hidden h-screen shrink-0 flex-col border-r border-border bg-card p-3 md:flex', collapsed ? 'w-16' : 'w-60')}>
-          <div className={cn('mb-4 flex items-center gap-2 px-2 py-2', collapsed && 'justify-center')}><Wallet2 className="h-5 w-5 text-primary" />{!collapsed && <span className="font-semibold">Money Manager Pro</span>}</div>
+        <aside className={cn('no-print sticky top-0 hidden h-screen shrink-0 flex-col border-r border-border/70 bg-card p-3 md:flex', collapsed ? 'w-16' : 'w-60')}>
+          <div className={cn('mb-4 flex items-center gap-2 px-2 py-2', collapsed && 'justify-center')}><Wallet2 className="h-5 w-5 text-primary" />{!collapsed && <span className="font-semibold tracking-tight">Money Manager Pro</span>}</div>
           <nav className="flex-1 space-y-0.5 overflow-y-auto" aria-label="Main">{GROUPS.map((g) => link(g, inGroup(path, g), collapsed))}<div className="my-3 border-t border-border" />{EXTRA.map((n) => link(n, path.startsWith(n.href), collapsed))}</nav>
           <Button variant="ghost" size="sm" className="mt-2" onClick={() => { setCollapsed(!collapsed); localStorage.setItem('sidebar', collapsed ? '0' : '1'); }} aria-label="Toggle sidebar">{collapsed ? <PanelLeftOpen className="h-4 w-4" /> : <><PanelLeftClose className="h-4 w-4" /> Collapse</>}</Button>
         </aside>
         <div className="min-w-0 flex-1">
-          <header className="no-print sticky top-0 z-30 flex h-14 items-center justify-between gap-2 border-b border-border bg-background/90 px-4 backdrop-blur">
-            <div className="flex items-center gap-2 md:hidden"><Wallet2 className="h-5 w-5 text-primary" /><span className="font-semibold">Money Manager</span></div>
+          <header className="no-print sticky top-0 z-30 flex h-14 items-center justify-between gap-2 border-b border-border/60 bg-background/85 px-4 backdrop-blur-md">
+            <div className="flex items-center gap-2 md:hidden"><span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-primary text-primary-foreground"><Wallet2 className="h-4 w-4" /></span><span className="font-semibold tracking-tight">Money</span></div>
             <div className="hidden text-sm text-muted-foreground md:block">{profile.full_name ? `Hello, ${profile.full_name.split(' ')[0]}` : 'Welcome'}</div>
             <div className="flex items-center gap-1">
-              <Button variant="ghost" size="icon" onClick={theme} aria-label="Toggle theme"><Sun className="hidden h-4 w-4 dark:block" /><Moon className="h-4 w-4 dark:hidden" /></Button>
+              <Button variant="ghost" size="icon" className="hidden md:inline-flex" onClick={theme} aria-label="Toggle theme"><Sun className="hidden h-4 w-4 dark:block" /><Moon className="h-4 w-4 dark:hidden" /></Button>
               <Link href="/notifications" className="relative inline-flex h-10 w-10 items-center justify-center rounded-md hover:bg-muted" aria-label={`Notifications${unread ? `, ${unread} unread` : ''}`}><Bell className="h-4 w-4" />{unread > 0 && <span className="absolute right-1.5 top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[10px] text-white">{unread > 99 ? '99+' : unread}</span>}</Link>
-              <Button variant="ghost" size="icon" onClick={logout} aria-label="Log out"><LogOut className="h-4 w-4" /></Button>
+              <Button variant="ghost" size="icon" className="hidden md:inline-flex" onClick={logout} aria-label="Log out"><LogOut className="h-4 w-4" /></Button>
+              <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setDrawer(true)} aria-label="Menu"><Menu className="h-5 w-5" /></Button>
             </div>
           </header>
-          <main className="mx-auto max-w-6xl px-4 py-5 pb-28 md:pb-10"><SectionTabs path={path} />{children}</main>
+          <main className="mx-auto max-w-6xl px-4 py-5 pb-32 md:pb-10"><SectionTabs path={path} />{children}</main>
         </div>
-        <nav className="no-print fixed inset-x-0 bottom-0 z-30 flex border-t border-border bg-card md:hidden" aria-label="Mobile">
-          {GROUPS.filter((g) => MOBILE.includes(g.label)).map((g) => { const a = inGroup(path, g); return (
-            <Link key={g.href} href={g.href} aria-current={a ? 'page' : undefined} className={cn('flex min-h-[56px] flex-1 flex-col items-center justify-center gap-0.5 text-[11px] font-medium', a ? 'text-primary' : 'text-muted-foreground')}><g.icon className="h-6 w-6" />{g.label}</Link>); })}
-          <button onClick={() => setDrawer(true)} aria-label="More" className={cn('flex min-h-[56px] flex-1 flex-col items-center justify-center gap-0.5 text-[11px] font-medium', moreActive ? 'text-primary' : 'text-muted-foreground')}><Menu className="h-6 w-6" />More</button>
+        <nav className="no-print safe-b fixed inset-x-0 bottom-0 z-30 border-t border-border/70 bg-card/90 backdrop-blur-md md:hidden" aria-label="Mobile">
+          <div className="grid grid-cols-5 items-end">
+            {(() => { const items = GROUPS.filter((g) => MOBILE.includes(g.label)); const tab = (g: Group) => { const a = inGroup(path, g); return (
+              <Link key={g.href} href={g.href} aria-current={a ? 'page' : undefined} className={cn('relative flex min-h-[60px] flex-col items-center justify-center gap-0.5 text-[11px] font-medium transition-colors', a ? 'text-primary' : 'text-muted-foreground')}>
+                {a && <span className="absolute top-0 h-0.5 w-8 rounded-full bg-primary" />}<g.icon className="h-6 w-6" strokeWidth={a ? 2.4 : 2} />{g.label}</Link>); };
+              return <>{items.slice(0, 2).map(tab)}
+                <div className="flex justify-center"><button onClick={qa.toggle} aria-label="Add transaction" aria-expanded={qa.menuOpen} className="-mt-5 inline-flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-fab ring-4 ring-background active:scale-95"><Plus className={cn('h-7 w-7 transition-transform duration-200', qa.menuOpen && 'rotate-45')} /></button></div>
+                {items.slice(2).map(tab)}</>; })()}
+          </div>
         </nav>
         {drawer && (
-          <div className="fixed inset-0 z-50 bg-black/50 md:hidden" onClick={() => setDrawer(false)}>
+          <div className="anim-fade fixed inset-0 z-50 bg-black/50 backdrop-blur-[2px] md:hidden" onClick={() => setDrawer(false)}>
             <div className="absolute inset-y-0 right-0 w-72 overflow-y-auto bg-card p-3" onClick={(e) => e.stopPropagation()}>
               <div className="mb-2 flex justify-end"><Button variant="ghost" size="icon" onClick={() => setDrawer(false)} aria-label="Close menu"><X className="h-4 w-4" /></Button></div>
               {GROUPS.filter((g) => !MOBILE.includes(g.label)).map((g) => link(g, inGroup(path, g), false))}
               {EXTRA.map((n) => link(n, path.startsWith(n.href), false))}
+              <div className="my-3 border-t border-border" />
+              <button onClick={theme} className="flex min-h-[44px] w-full items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-muted"><Sun className="hidden h-5 w-5 dark:block" /><Moon className="h-5 w-5 dark:hidden" />Switch theme</button>
+              <button onClick={logout} className="flex min-h-[44px] w-full items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-destructive hover:bg-muted"><LogOut className="h-5 w-5" />Log out</button>
             </div>
           </div>
         )}
       </div>
-    </QuickAddProvider>
+    </>
   );
 }

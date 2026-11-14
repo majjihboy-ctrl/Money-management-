@@ -14,17 +14,17 @@ import type { Debt, Goal, Txn } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
 export type Mode = 'income' | 'expense' | 'transfer' | 'savings' | 'debt' | 'deposit' | 'withdrawal';
-type Ctx = { open: (m: Mode, initial?: Txn, preset?: Record<string, string>) => void };
-const QA = createContext<Ctx>({ open: () => {} });
+type Ctx = { open: (m: Mode, initial?: Txn, preset?: Record<string, string>) => void; toggle: () => void; menuOpen: boolean };
+const QA = createContext<Ctx>({ open: () => {}, toggle: () => {}, menuOpen: false });
 export const useQuickAdd = () => useContext(QA);
 export const METHODS = ['Cash', 'M-Pesa', 'Airtel Money', 'Bank Transfer', 'Card', 'Cheque', 'Other'];
 const TITLES: Record<Mode, string> = { income: 'Add income', expense: 'Add expense', transfer: 'Transfer money', savings: 'Savings contribution', debt: 'Record debt payment', deposit: 'Record deposit', withdrawal: 'Record withdrawal' };
-const MENU: { mode: Mode; label: string; icon: React.ReactNode }[] = [
-  { mode: 'income', label: 'Add Income', icon: <ArrowDownLeft className="h-4 w-4 text-success" /> },
-  { mode: 'expense', label: 'Add Expense', icon: <ArrowUpRight className="h-4 w-4 text-destructive" /> },
-  { mode: 'transfer', label: 'Transfer Money', icon: <ArrowLeftRight className="h-4 w-4" /> },
-  { mode: 'savings', label: 'Add Savings Contribution', icon: <PiggyBank className="h-4 w-4" /> },
-  { mode: 'debt', label: 'Record Debt Payment', icon: <Landmark className="h-4 w-4" /> },
+const MENU: { mode: Mode; label: string; icon: React.ReactNode; tone: string }[] = [
+  { mode: 'expense', label: 'Expense', icon: <ArrowUpRight className="h-5 w-5" />, tone: 'bg-destructive/15 text-destructive' },
+  { mode: 'income', label: 'Income', icon: <ArrowDownLeft className="h-5 w-5" />, tone: 'bg-success/15 text-success' },
+  { mode: 'transfer', label: 'Transfer', icon: <ArrowLeftRight className="h-5 w-5" />, tone: 'bg-blue-500/15 text-blue-600 dark:text-blue-400' },
+  { mode: 'savings', label: 'Savings', icon: <PiggyBank className="h-5 w-5" />, tone: 'bg-teal-500/15 text-teal-600 dark:text-teal-400' },
+  { mode: 'debt', label: 'Debt payment', icon: <Landmark className="h-5 w-5" />, tone: 'bg-amber-500/15 text-amber-600 dark:text-amber-400' },
 ];
 
 export function QuickAddProvider({ children }: { children: React.ReactNode }) {
@@ -33,15 +33,19 @@ export function QuickAddProvider({ children }: { children: React.ReactNode }) {
   const open = useCallback((mode: Mode, initial?: Txn, preset?: Record<string, string>) => { setMenu(false); setState({ mode, initial, preset, k: Date.now() }); }, []);
   const close = useCallback(() => setState(null), []);
   return (
-    <QA.Provider value={{ open }}>
+    <QA.Provider value={{ open, toggle: () => setMenu((v) => !v), menuOpen: menu }}>
       {children}
-      <div className="no-print fixed bottom-20 right-4 z-40 md:bottom-6 md:right-6">
-        {menu && (
-          <div className="mb-2 w-60 overflow-hidden rounded-xl border border-border bg-card shadow-lg">
-            {MENU.map((m) => <button key={m.mode} onClick={() => open(m.mode)} className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm hover:bg-muted">{m.icon}{m.label}</button>)}
-          </div>
-        )}
-        <Button size="icon" className="ml-auto h-14 w-14 rounded-full shadow-lg" onClick={() => setMenu((v) => !v)} aria-label="Add transaction" aria-expanded={menu}><Plus className={cn('h-6 w-6 transition-transform', menu && 'rotate-45')} /></Button>
+      {menu && <div className="anim-fade fixed inset-0 z-40 bg-black/40 backdrop-blur-[2px]" onClick={() => setMenu(false)} aria-hidden />}
+      {menu && (
+        <div role="menu" aria-label="Add" className="anim-sheet no-print fixed inset-x-4 bottom-24 z-50 grid grid-cols-2 gap-2 rounded-3xl border border-border bg-card p-3 shadow-xl md:inset-x-auto md:right-6 md:w-80">
+          {MENU.map((m) => (
+            <button key={m.mode} role="menuitem" onClick={() => open(m.mode)} className="flex min-h-[64px] items-center gap-3 rounded-2xl border border-border/70 bg-background px-3 text-left text-sm font-medium active:scale-[0.98] hover:bg-muted">
+              <span className={cn('inline-flex h-10 w-10 items-center justify-center rounded-full', m.tone)}>{m.icon}</span>{m.label}
+            </button>))}
+        </div>
+      )}
+      <div className="no-print fixed bottom-6 right-6 z-50 hidden md:block">
+        <Button size="icon" className="h-14 w-14 rounded-full shadow-fab" onClick={() => setMenu((v) => !v)} aria-label="Add transaction" aria-expanded={menu}><Plus className={cn('h-6 w-6 transition-transform', menu && 'rotate-45')} /></Button>
       </div>
       <Modal open={!!state} onClose={close} title={state ? (state.initial ? 'Edit ' + state.mode : TITLES[state.mode]) : ''} wide={state?.mode === 'expense'}>
         {state && (state.mode === 'income' || state.mode === 'expense' || state.mode === 'deposit' || state.mode === 'withdrawal'
